@@ -1,12 +1,12 @@
-// Firebase setup (Google login + Firestore database). No need to edit this file.
+// Firebase setup (Google login, admin login + Firestore database). No need to edit this file.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect,
-  signOut, onAuthStateChanged
+  signInWithEmailAndPassword, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection,
-  query, where, orderBy, getDocs, serverTimestamp, writeBatch
+  query, where, orderBy, getDocs, serverTimestamp, writeBatch, documentId
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
@@ -25,7 +25,7 @@ provider.setCustomParameters({ prompt: "select_account" });
 
 export const fb = {
   doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection,
-  query, where, orderBy, getDocs, serverTimestamp, writeBatch
+  query, where, orderBy, getDocs, serverTimestamp, writeBatch, documentId
 };
 
 // Shows Google's own sign-in screen in the site's current language
@@ -33,8 +33,12 @@ export function setAuthLang(lang) {
   if (auth) auth.languageCode = lang;
 }
 
-export async function signInGoogle() {
+function needAuth() {
   if (!auth) throw Object.assign(new Error("not-configured"), { code: "app/not-configured" });
+}
+
+export async function signInGoogle() {
+  needAuth();
   try {
     return await signInWithPopup(auth, provider);
   } catch (e) {
@@ -44,6 +48,12 @@ export async function signInGoogle() {
     }
     throw e;
   }
+}
+
+// Admin login: username + password (account created in Firebase console)
+export function signInAdmin(email, password) {
+  needAuth();
+  return signInWithEmailAndPassword(auth, email, password);
 }
 
 export function signOutUser() {
