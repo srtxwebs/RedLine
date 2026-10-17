@@ -47,6 +47,7 @@ const DICT = {
     "shop.next": "Next picture",
     "shop.count": "{n} websites",
     "shop.notFound": "This website is no longer available.",
+    "shop.loadError": "We couldn't load the websites. Check your internet and refresh the page.",
 
     "custom.fromListing": "You're asking about this website:",
 
@@ -431,6 +432,7 @@ const DICT = {
     "shop.next": "Imagen siguiente",
     "shop.count": "{n} páginas",
     "shop.notFound": "Esta página ya no está disponible.",
+    "shop.loadError": "No pudimos cargar las páginas. Revisa tu internet y recarga la página.",
 
     "custom.fromListing": "Estás preguntando por esta página:",
 
