@@ -1,1 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings</title>
+  <meta name="theme-color" content="#0a0a0b">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script type="module" src="js/settings.js"></script>
+</head>
+<body data-page="settings" data-title="title.settings">
+  <div id="site-header"></div>
 
+  <main>
+    <section class="page-head">
+      <div class="container-narrow">
+        <span class="eyebrow" data-i18n="settings.eyebrow"></span>
+        <h1 data-i18n="settings.title"></h1>
+      </div>
+    </section>
+
+    <div class="container-narrow settings-stack">
+      <!-- Language -->
+      <section class="card">
+        <h3 data-i18n="settings.language"></h3>
+        <p class="muted" style="margin:0" data-i18n="settings.languageSub"></p>
+        <div class="lang-cards">
+          <button type="button" class="lang-card" data-lang-card="en">
+            <span class="lang-code">EN</span>
+            <strong data-i18n="lang.en"></strong>
+          </button>
+          <button type="button" class="lang-card" data-lang-card="es">
+            <span class="lang-code">ES</span>
+            <strong data-i18n="lang.es"></strong>
+          </button>
+        </div>
+      </section>
+
+      <!-- Display -->
+      <section class="card">
+        <h3 data-i18n="settings.display"></h3>
+        <div class="setting-row">
+          <div>
+            <p><strong data-i18n="settings.motion"></strong></p>
+            <p class="muted small" data-i18n="settings.motionSub"></p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="s-motion" data-i18n-aria="settings.motion">
+            <span></span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Account -->
+      <section class="card">
+        <h3 data-i18n="settings.account"></h3>
+        <div id="s-account"><p class="muted" data-i18n="common.loading"></p></div>
+      </section>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+</body>
+</html>
