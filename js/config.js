@@ -5,9 +5,17 @@ export const SITE = {
   // Your business name (shown in the logo, tab title and footer)
   brand: "RedLine Webs",
 
-  // Google emails that can open admin.html and manage bookings/requests.
-  // ⚠️ Also put the same email(s) in firestore.rules
-  adminEmails: ["YOUR_EMAIL@gmail.com"],
+  // ---- ADMIN ACCESS ----
+  // Admin username login (login.html → "Admin" tab).
+  // The username "admin1100" signs in as the Firebase account admin1100@redline.admin
+  // ⚠️ The PASSWORD is NOT stored here (this code is public). You set it in
+  //    Firebase → Authentication → Users → Add user (see README.md).
+  adminUsers: ["admin1100"],
+  adminLoginDomain: "redline.admin",
+
+  // Optional: Google emails that are also admins (lowercase). Leave [] if none.
+  // ⚠️ Keep the same list in firestore.rules
+  adminEmails: [],
 
   // Currency for prices ("MXN", "USD", ...)
   currency: "MXN",
@@ -23,5 +31,8 @@ export const SITE = {
   timeSlots: ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "17:00"],
 
   // Days you are closed: 0 = Sunday, 6 = Saturday
-  closedWeekdays: [0]
+  closedWeekdays: [0],
+
+  // Categories for ready-made website listings (names are in js/i18n.js under type.*)
+  listingCategories: ["landing", "business", "store", "webapp", "portfolio", "other"]
 };
