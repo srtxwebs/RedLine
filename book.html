@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Book a website</title>
+  <meta name="theme-color" content="#0a0a0b">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script type="module" src="js/book.js"></script>
+</head>
+<body data-page="book" data-title="title.book">
+  <div id="site-header"></div>
+
+  <main>
+    <section class="page-head">
+      <div class="container">
+        <span class="eyebrow" data-i18n="book.eyebrow"></span>
+        <h1 data-i18n="book.title"></h1>
+        <p class="muted" data-i18n="book.sub"></p>
+      </div>
+    </section>
+
+    <div class="container">
+      <div class="book-layout" id="book-form">
+        <div class="book-steps">
+          <!-- 1. Package -->
+          <section class="card step-card">
+            <h2><span class="step-num">1</span><span data-i18n="book.step1"></span></h2>
+            <div class="pkg-options" id="pkg-options"></div>
+          </section>
+
+          <!-- 2 + 3. Date & time -->
+          <section class="card step-card">
+            <div class="when">
+              <div>
+                <h2><span class="step-num">2</span><span data-i18n="book.step2"></span></h2>
+                <div class="cal-head">
+                  <button type="button" class="cal-nav" id="cal-prev" data-i18n-aria="book.prev">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+                  </button>
+                  <strong id="cal-title"></strong>
+                  <button type="button" class="cal-nav" id="cal-next" data-i18n-aria="book.next">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                  </button>
+                </div>
+                <div class="cal-grid" id="cal-grid"></div>
+              </div>
+              <div>
+                <h2><span class="step-num">3</span><span data-i18n="book.step3"></span></h2>
+                <div class="slots" id="slots"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 4. Details -->
+          <section class="card step-card">
+            <h2><span class="step-num">4</span><span data-i18n="book.step4"></span></h2>
+            <div class="form-grid">
+              <div class="field">
+                <label for="b-name"><span data-i18n="book.name"></span><span class="req">*</span></label>
+                <input id="b-name" type="text" autocomplete="name" maxlength="80">
+              </div>
+              <div class="field">
+                <label for="b-phone"><span data-i18n="book.phone"></span><span class="req">*</span></label>
+                <input id="b-phone" type="tel" autocomplete="tel" maxlength="30">
+              </div>
+              <div class="field full">
+                <label for="b-notes"><span data-i18n="book.notes"></span><span class="opt">(<span data-i18n="common.optional"></span>)</span></label>
+                <textarea id="b-notes" maxlength="1500" data-i18n-placeholder="book.notesPh"></textarea>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Summary -->
+        <aside class="card summary">
+          <h3 data-i18n="book.summary"></h3>
+          <dl>
+            <div><dt data-i18n="book.package"></dt><dd id="sum-pkg"></dd></div>
+            <div><dt data-i18n="book.date"></dt><dd id="sum-date"></dd></div>
+            <div><dt data-i18n="book.time"></dt><dd id="sum-time"></dd></div>
+            <div><dt data-i18n="book.price"></dt><dd id="sum-price"></dd></div>
+          </dl>
+          <button type="button" class="btn btn-red btn-block" id="confirm-btn"></button>
+          <p class="hint" data-i18n="book.noPayment"></p>
+        </aside>
+      </div>
+
+      <!-- Success -->
+      <div class="card success-box" id="book-success" hidden>
+        <div class="success-icon"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></div>
+        <h2 data-i18n="book.successTitle"></h2>
+        <p class="muted" data-i18n="book.successSub"></p>
+        <p id="success-detail"></p>
+        <div class="btns">
+          <a class="btn btn-red" href="profile.html#bookings" data-i18n="book.viewProfile"></a>
+          <a class="btn btn-ghost" href="book.html" data-i18n="book.another"></a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+</body>
+</html>
