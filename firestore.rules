@@ -1,0 +1,76 @@
+rules_version = '2';
+
+// ============================================================
+//  DATABASE SECURITY RULES
+//  Copy ALL of this into Firebase console → Firestore Database → Rules → Publish
+//  ⚠️ Put your admin Gmail below (same as js/config.js)
+// ============================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function admins() { return ['YOUR_EMAIL@gmail.com']; }
+
+    function signedIn() { return request.auth != null; }
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() in admins();
+    }
+    function isMe(uid) { return signedIn() && request.auth.uid == uid; }
+
+    function validProfile(d, uid) {
+      return d.uid == uid
+        && d.email == request.auth.token.email
+        && d.displayName is string && d.displayName.size() <= 80
+        && d.photo is string && d.photo.size() < 400000
+        && (!('bio' in d) || (d.bio is string && d.bio.size() <= 600))
+        && (!('phone' in d) || (d.phone is string && d.phone.size() <= 40))
+        && (!('company' in d) || (d.company is string && d.company.size() <= 120));
+    }
+
+    // ---- User profiles: each person only sees and edits their own ----
+    match /users/{uid} {
+      allow read: if isMe(uid) || isAdmin();
+      allow create, update: if isMe(uid) && validProfile(request.resource.data, uid);
+      allow delete: if isAdmin();
+    }
+
+    // ---- Booked time slots: public so the calendar can show taken times ----
+    match /slots/{slotId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'bookingId', 'date', 'createdAt'])
+        && slotId.matches('^' + request.resource.data.date + '_[0-9]{4}$');
+      // no "update" rule → a taken slot can never be overwritten (prevents double booking)
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    // ---- Bookings ----
+    match /bookings/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && existsAfter(/databases/$(database)/documents/slots/$(request.resource.data.slotId))
+        && getAfter(/databases/$(database)/documents/slots/$(request.resource.data.slotId)).data.bookingId == id
+        && getAfter(/databases/$(database)/documents/slots/$(request.resource.data.slotId)).data.uid == request.auth.uid;
+      allow update: if isAdmin()
+        || (signedIn() && resource.data.uid == request.auth.uid
+            && request.resource.data.status == 'cancelled'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']));
+      allow delete: if isAdmin();
+    }
+
+    // ---- Custom website requests ----
+    match /requests/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 5000;
+      allow update, delete: if isAdmin();
+    }
+  }
+}

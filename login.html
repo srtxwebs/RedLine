@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in</title>
+  <meta name="theme-color" content="#0a0a0b">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script type="module" src="js/login.js"></script>
+</head>
+<body data-page="login" data-title="title.login">
+  <div id="site-header"></div>
+
+  <main>
+    <div class="container auth-wrap">
+      <div class="card auth-card">
+        <div class="auth-side">
+          <span class="eyebrow" style="color:#fff" data-i18n="login.eyebrow"></span>
+          <h2 data-i18n="login.title"></h2>
+          <ul>
+            <li data-i18n="login.perk1"></li>
+            <li data-i18n="login.perk2"></li>
+            <li data-i18n="login.perk3"></li>
+          </ul>
+        </div>
+
+        <div class="auth-main">
+          <!-- Signed out -->
+          <div id="login-out">
+            <h2 data-i18n="nav.signin"></h2>
+            <p class="muted" data-i18n="login.sub"></p>
+            <button type="button" class="btn btn-google" id="google-btn"></button>
+            <p class="hint" data-i18n="login.note"></p>
+          </div>
+
+          <!-- Signed in -->
+          <div id="login-in" hidden>
+            <p class="muted" data-i18n="login.signedIn"></p>
+            <div class="signed-in-box" id="signed-in-box"></div>
+            <a class="btn btn-red btn-block" href="profile.html" data-i18n="login.goProfile"></a>
+            <button type="button" class="btn btn-ghost btn-block" style="margin-top:.7rem" id="login-signout" data-i18n="nav.signout"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+</body>
+</html>

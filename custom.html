@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Request a custom website</title>
+  <meta name="theme-color" content="#0a0a0b">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script type="module" src="js/custom.js"></script>
+</head>
+<body data-page="custom" data-title="title.custom">
+  <div id="site-header"></div>
+
+  <main>
+    <section class="page-head">
+      <div class="container-narrow">
+        <span class="eyebrow" data-i18n="custom.eyebrow"></span>
+        <h1 data-i18n="custom.title"></h1>
+        <p class="muted" data-i18n="custom.sub"></p>
+      </div>
+    </section>
+
+    <div class="container-narrow" style="padding-bottom:80px">
+      <form class="card" id="custom-form" novalidate>
+        <!-- Contact -->
+        <div class="form-block">
+          <h3 class="form-section-title" data-i18n="custom.contact"></h3>
+          <div class="form-grid">
+            <div class="field">
+              <label for="c-name"><span data-i18n="f.name"></span><span class="req">*</span></label>
+              <input id="c-name" name="name" type="text" autocomplete="name" maxlength="80" required>
+            </div>
+            <div class="field">
+              <label for="c-email"><span data-i18n="f.email"></span><span class="req">*</span></label>
+              <input id="c-email" name="email" type="email" autocomplete="email" maxlength="120" required>
+            </div>
+            <div class="field">
+              <label for="c-phone"><span data-i18n="f.phone"></span><span class="req">*</span></label>
+              <input id="c-phone" name="phone" type="tel" autocomplete="tel" maxlength="30" required>
+            </div>
+            <div class="field">
+              <label for="c-business"><span data-i18n="f.business"></span><span class="opt">(<span data-i18n="common.optional"></span>)</span></label>
+              <input id="c-business" name="business" type="text" autocomplete="organization" maxlength="100">
+            </div>
+          </div>
+        </div>
+
+        <!-- Project -->
+        <div class="form-block">
+          <h3 class="form-section-title" data-i18n="custom.project"></h3>
+          <div class="form-grid">
+            <div class="field">
+              <label for="c-type"><span data-i18n="f.type"></span><span class="req">*</span></label>
+              <select id="c-type" name="type" required>
+                <option value="" data-i18n="f.choose"></option>
+                <option value="landing" data-i18n="type.landing"></option>
+                <option value="business" data-i18n="type.business"></option>
+                <option value="store" data-i18n="type.store"></option>
+                <option value="webapp" data-i18n="type.webapp"></option>
+                <option value="portfolio" data-i18n="type.portfolio"></option>
+                <option value="other" data-i18n="type.other"></option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="c-pages"><span data-i18n="f.pages"></span></label>
+              <select id="c-pages" name="pages">
+                <option value="" data-i18n="f.choose"></option>
+                <option value="p1" data-i18n="pages.p1"></option>
+                <option value="p2" data-i18n="pages.p2"></option>
+                <option value="p3" data-i18n="pages.p3"></option>
+                <option value="p4" data-i18n="pages.p4"></option>
+                <option value="p5" data-i18n="pages.p5"></option>
+              </select>
+            </div>
+            <div class="field full">
+              <span class="field-label" data-i18n="f.features"></span>
+              <div class="chips">
+                <label class="chip"><input type="checkbox" name="features" value="store"><span data-i18n="feat.store"></span></label>
+                <label class="chip"><input type="checkbox" name="features" value="payments"><span data-i18n="feat.payments"></span></label>
+                <label class="chip"><input type="checkbox" name="features" value="booking"><span data-i18n="feat.booking"></span></label>
+                <label class="chip"><input type="checkbox" name="features" value="login"><span data-i18n="feat.login"></span></label>
+                <label class="chip"><input type="checkbox" name="features" value="blog"><span data-i18n="feat.blog"></span></label>
+                <label class="chip"><input type="checkbox" name="features" value="gallery"><span data-i18n="feat.gallery"></span></label>
+                <label class="chip"><input type="checkbox" name="features" value="multilang"><span data-i18n="feat.multilang"></span></label>
+                <label class="chip"><input type="checkbox" name="features" value="contact"><span data-i18n="feat.contact"></span></label>
+                <label class="chip"><input type="checkbox" name="features" value="whatsapp"><span data-i18n="feat.whatsapp"></span></label>
+                <label class="chip"><input type="checkbox" name="features" value="seo"><span data-i18n="feat.seo"></span></label>
+                <label class="chip"><input type="checkbox" name="features" value="admin"><span data-i18n="feat.admin"></span></label>
+                <label class="chip"><input type="checkbox" name="features" value="maps"><span data-i18n="feat.maps"></span></label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Details -->
+        <div class="form-block">
+          <h3 class="form-section-title" data-i18n="custom.details"></h3>
+          <div class="form-grid">
+            <div class="field">
+              <label for="c-budget"><span data-i18n="f.budget"></span><span class="req">*</span></label>
+              <select id="c-budget" name="budget" required>
+                <option value="" data-i18n="f.choose"></option>
+                <option value="b1" data-i18n="budget.b1"></option>
+                <option value="b2" data-i18n="budget.b2"></option>
+                <option value="b3" data-i18n="budget.b3"></option>
+                <option value="b4" data-i18n="budget.b4"></option>
+                <option value="b5" data-i18n="budget.b5"></option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="c-deadline"><span data-i18n="f.deadline"></span><span class="opt">(<span data-i18n="common.optional"></span>)</span></label>
+              <input id="c-deadline" name="deadline" type="date">
+            </div>
+            <div class="field full">
+              <label for="c-description"><span data-i18n="f.description"></span><span class="req">*</span></label>
+              <textarea id="c-description" name="description" maxlength="4000" required data-i18n-placeholder="f.descriptionPh"></textarea>
+            </div>
+            <div class="field full">
+              <label for="c-links"><span data-i18n="f.links"></span><span class="opt">(<span data-i18n="common.optional"></span>)</span></label>
+              <textarea id="c-links" name="links" maxlength="1500" rows="3" style="min-height:80px" data-i18n-placeholder="f.linksPh"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:2rem">
+          <button type="submit" class="btn btn-red btn-block" id="c-submit"></button>
+        </div>
+      </form>
+
+      <div class="card success-box" id="custom-success" hidden>
+        <div class="success-icon"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></div>
+        <h2 data-i18n="custom.successTitle"></h2>
+        <p class="muted" data-i18n="custom.successSub"></p>
+        <div class="btns">
+          <a class="btn btn-red" href="profile.html#requests" data-i18n="custom.viewProfile"></a>
+          <a class="btn btn-ghost" href="custom.html" data-i18n="custom.another"></a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Admin panel</title>
+  <meta name="theme-color" content="#0a0a0b">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script type="module" src="js/admin.js"></script>
+</head>
+<body data-page="admin" data-title="title.admin">
+  <div id="site-header"></div>
+
+  <main>
+    <section class="page-head">
+      <div class="container">
+        <span class="eyebrow" data-i18n="admin.eyebrow"></span>
+        <h1 data-i18n="admin.title"></h1>
+        <p class="muted" data-i18n="admin.sub"></p>
+      </div>
+    </section>
+
+    <div class="container">
+      <div class="loading" id="a-loading" data-i18n="common.loading"></div>
+      <div id="a-gate" hidden></div>
+
+      <div id="a-denied" class="card gate" hidden>
+        <h2 data-i18n="admin.denied"></h2>
+        <p class="muted" data-i18n="admin.deniedSub"></p>
+      </div>
+
+      <div id="a-panel" hidden>
+        <div class="admin-toolbar">
+          <div class="tabs" role="tablist">
+            <button type="button" class="tab active" role="tab" data-tab="bookings"><span data-i18n="admin.bookings"></span><span class="count" id="count-bookings"></span></button>
+            <button type="button" class="tab" role="tab" data-tab="requests"><span data-i18n="admin.requests"></span><span class="count" id="count-requests"></span></button>
+          </div>
+          <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">
+            <div class="field">
+              <label for="a-filter" class="small" data-i18n="admin.filter"></label>
+              <select id="a-filter"></select>
+            </div>
+            <button type="button" class="btn btn-dark btn-sm" id="a-refresh" data-i18n="admin.refresh"></button>
+          </div>
+        </div>
+        <div class="admin-list" id="a-list"></div>
+      </div>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+</body>
+</html>
