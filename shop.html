@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ready-made websites</title>
+  <meta name="theme-color" content="#08080a">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script type="module" src="js/shop.js"></script>
+</head>
+<body data-page="shop" data-title="title.shop">
+  <div id="site-header"></div>
+
+  <main>
+    <section class="page-head">
+      <div class="container">
+        <span class="eyebrow reveal" data-i18n="shop.eyebrow"></span>
+        <h1 class="reveal" style="--d:80ms" data-i18n="shop.title"></h1>
+        <p class="muted reveal" style="--d:160ms" data-i18n="shop.sub"></p>
+      </div>
+    </section>
+
+    <div class="container" style="padding-bottom:100px">
+      <div class="shop-toolbar reveal">
+        <div class="filter-chips" id="filters"></div>
+        <label class="sort-box">
+          <span data-i18n="shop.sort"></span>
+          <select id="sort">
+            <option value="new" data-i18n="shop.sortNew"></option>
+            <option value="low" data-i18n="shop.sortLow"></option>
+            <option value="high" data-i18n="shop.sortHigh"></option>
+          </select>
+        </label>
+      </div>
+      <p class="hint" id="count" style="margin:-.6rem 0 1.2rem"></p>
+      <div class="listing-grid" id="grid">
+        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+      </div>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+</body>
+</html>
