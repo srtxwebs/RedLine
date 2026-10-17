@@ -3,10 +3,10 @@
 //  These keys are safe to put on GitHub: security comes from firestore.rules
 // ============================================================
 export const firebaseConfig = {
-  apiKey: "AIzaSyBVNYGU-NYeCHhTEB6kwW8qRglaTWs17rY",
-  authDomain: "redline-d8e13.firebaseapp.com",
-  projectId: "redline-d8e13",
-  storageBucket: "redline-d8e13.firebasestorage.app",
-  messagingSenderId: "810728186015",
-  appId: "1:810728186015:web:e51df8691258e5a04742aa"
+  apiKey: "AIzaSyAdRXf30p9uuRa0Jcg7DraWWGro2p7Ybxg",
+  authDomain: "redline-acf5d.firebaseapp.com",
+  projectId: "redline-acf5d",
+  storageBucket: "redline-acf5d.firebasestorage.app",
+  messagingSenderId: "1024371706309",
+  appId: "1:1024371706309:web:19eadc70f430ace77923ac"
 };
