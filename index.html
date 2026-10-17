@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Custom websites</title>
+  <meta name="theme-color" content="#0a0a0b">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script type="module" src="js/home.js"></script>
+</head>
+<body data-page="home" data-title="title.home">
+  <div id="site-header"></div>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="hero-glow" aria-hidden="true"></div>
+      <div class="container hero-grid">
+        <div>
+          <span class="eyebrow" data-i18n="hero.eyebrow"></span>
+          <h1 data-i18n-html="hero.title"></h1>
+          <p class="hero-sub" data-i18n="hero.sub"></p>
+          <div class="hero-ctas">
+            <a class="btn btn-red" href="book.html" data-i18n="hero.cta1"></a>
+            <a class="btn btn-ghost" href="custom.html" data-i18n="hero.cta2"></a>
+          </div>
+          <div class="stats">
+            <div class="stat"><strong>14</strong><span data-i18n="stat.days"></span></div>
+            <div class="stat"><strong>100%</strong><span data-i18n="stat.mobile"></span></div>
+            <div class="stat"><strong>30</strong><span data-i18n="stat.support"></span></div>
+          </div>
+        </div>
+        <div class="hero-visual" aria-hidden="true">
+          <div class="mock">
+            <div class="mock-bar"><i></i><i></i><i></i></div>
+            <div class="mock-body">
+              <div class="mock-hero"></div>
+              <div class="mock-line w60"></div>
+              <div class="mock-line w40"></div>
+              <div class="mock-row"><span></span><span></span><span></span></div>
+              <div class="mock-row"><span></span><span></span><span></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SERVICES -->
+    <section class="section section-alt" id="services">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow" data-i18n="services.eyebrow"></span>
+          <h2 data-i18n="services.title"></h2>
+          <p class="muted" data-i18n="services.sub"></p>
+        </div>
+        <div class="grid-3" id="services-grid"></div>
+      </div>
+    </section>
+
+    <!-- PACKAGES -->
+    <section class="section" id="packages">
+      <div class="container">
+        <div class="section-head center reveal">
+          <span class="eyebrow" data-i18n="packages.eyebrow"></span>
+          <h2 data-i18n="packages.title"></h2>
+          <p class="muted" data-i18n="packages.sub"></p>
+        </div>
+        <div class="grid-3" id="packages-grid"></div>
+      </div>
+    </section>
+
+    <!-- PROCESS -->
+    <section class="section section-alt">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow" data-i18n="process.eyebrow"></span>
+          <h2 data-i18n="process.title"></h2>
+        </div>
+        <div class="steps">
+          <div class="step reveal"><h3 data-i18n="process.s1.t"></h3><p data-i18n="process.s1.d"></p></div>
+          <div class="step reveal"><h3 data-i18n="process.s2.t"></h3><p data-i18n="process.s2.d"></p></div>
+          <div class="step reveal"><h3 data-i18n="process.s3.t"></h3><p data-i18n="process.s3.d"></p></div>
+          <div class="step reveal"><h3 data-i18n="process.s4.t"></h3><p data-i18n="process.s4.d"></p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="section">
+      <div class="container">
+        <div class="cta-band reveal">
+          <div>
+            <h2 data-i18n="cta.title"></h2>
+            <p data-i18n="cta.sub"></p>
+          </div>
+          <a class="btn" href="custom.html" data-i18n="cta.btn"></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="section section-alt" id="faq">
+      <div class="container-narrow">
+        <div class="section-head center reveal">
+          <span class="eyebrow" data-i18n="faq.eyebrow"></span>
+          <h2 data-i18n="faq.title"></h2>
+        </div>
+        <div class="faq">
+          <details><summary data-i18n="faq.q1"></summary><p data-i18n="faq.a1"></p></details>
+          <details><summary data-i18n="faq.q2"></summary><p data-i18n="faq.a2"></p></details>
+          <details><summary data-i18n="faq.q3"></summary><p data-i18n="faq.a3"></p></details>
+          <details><summary data-i18n="faq.q4"></summary><p data-i18n="faq.a4"></p></details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="site-footer"></div>
+</body>
+</html>
