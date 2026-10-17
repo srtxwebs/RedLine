@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Custom websites</title>
-  <meta name="theme-color" content="#0a0a0b">
+  <meta name="theme-color" content="#08080a">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
   <script type="module" src="js/home.js"></script>
 </head>
@@ -16,42 +16,40 @@
   <div id="site-header"></div>
 
   <main>
-    <!-- HERO -->
-    <section class="hero">
-      <div class="hero-bg" aria-hidden="true"></div>
-      <div class="hero-glow" aria-hidden="true"></div>
-      <div class="container hero-grid">
-        <div>
+    <!-- HERO: torn paper with corrupted code falling behind it -->
+    <section class="hero" id="hero">
+      <canvas id="code-rain" aria-hidden="true"></canvas>
+      <div class="hero-scan" aria-hidden="true"></div>
+      <svg class="paper" id="paper" aria-hidden="true"></svg>
+
+      <div class="container hero-inner">
+        <div class="hero-copy">
+          <span class="hero-badge"><span class="pulse"></span><span data-i18n="hero.badge"></span></span>
           <span class="eyebrow" data-i18n="hero.eyebrow"></span>
-          <h1 data-i18n-html="hero.title"></h1>
+          <h1 class="glitch" id="hero-title" data-i18n-html="hero.title"></h1>
           <p class="hero-sub" data-i18n="hero.sub"></p>
           <div class="hero-ctas">
-            <a class="btn btn-red" href="book.html" data-i18n="hero.cta1"></a>
-            <a class="btn btn-ghost" href="custom.html" data-i18n="hero.cta2"></a>
+            <a class="btn btn-red btn-lg magnetic" href="book.html"><span data-i18n="hero.cta1"></span><span class="arrow">→</span></a>
+            <a class="btn btn-ghost btn-lg magnetic" href="shop.html" data-i18n="nav.shop"></a>
           </div>
           <div class="stats">
-            <div class="stat"><strong>14</strong><span data-i18n="stat.days"></span></div>
-            <div class="stat"><strong>100%</strong><span data-i18n="stat.mobile"></span></div>
-            <div class="stat"><strong>30</strong><span data-i18n="stat.support"></span></div>
-          </div>
-        </div>
-        <div class="hero-visual" aria-hidden="true">
-          <div class="mock">
-            <div class="mock-bar"><i></i><i></i><i></i></div>
-            <div class="mock-body">
-              <div class="mock-hero"></div>
-              <div class="mock-line w60"></div>
-              <div class="mock-line w40"></div>
-              <div class="mock-row"><span></span><span></span><span></span></div>
-              <div class="mock-row"><span></span><span></span><span></span></div>
-            </div>
+            <div class="stat"><strong><span data-count="14">0</span></strong><span data-i18n="stat.days"></span></div>
+            <div class="stat"><strong><span data-count="100">0</span><span class="text-red">%</span></strong><span data-i18n="stat.mobile"></span></div>
+            <div class="stat"><strong><span data-count="30">0</span></strong><span data-i18n="stat.support"></span></div>
           </div>
         </div>
       </div>
+
+      <a class="scroll-cue" href="#services"><span data-i18n="hero.scroll"></span><i></i></a>
     </section>
 
+    <!-- Red tape strip -->
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-track" id="marquee-track"></div>
+    </div>
+
     <!-- SERVICES -->
-    <section class="section section-alt" id="services">
+    <section class="section" id="services">
       <div class="container">
         <div class="section-head reveal">
           <span class="eyebrow" data-i18n="services.eyebrow"></span>
@@ -59,6 +57,21 @@
           <p class="muted" data-i18n="services.sub"></p>
         </div>
         <div class="grid-3" id="services-grid"></div>
+      </div>
+    </section>
+
+    <!-- READY-MADE WEBSITES -->
+    <section class="section section-alt" id="featured" hidden>
+      <div class="container">
+        <div class="section-head split reveal">
+          <div>
+            <span class="eyebrow" data-i18n="home.featured.eyebrow"></span>
+            <h2 data-i18n="home.featured.title"></h2>
+            <p class="muted" data-i18n="home.featured.sub"></p>
+          </div>
+          <a class="btn btn-ghost magnetic" href="shop.html"><span data-i18n="home.featured.all"></span><span class="arrow">→</span></a>
+        </div>
+        <div class="listing-grid" id="featured-grid"></div>
       </div>
     </section>
 
@@ -82,10 +95,10 @@
           <h2 data-i18n="process.title"></h2>
         </div>
         <div class="steps">
-          <div class="step reveal"><h3 data-i18n="process.s1.t"></h3><p data-i18n="process.s1.d"></p></div>
-          <div class="step reveal"><h3 data-i18n="process.s2.t"></h3><p data-i18n="process.s2.d"></p></div>
-          <div class="step reveal"><h3 data-i18n="process.s3.t"></h3><p data-i18n="process.s3.d"></p></div>
-          <div class="step reveal"><h3 data-i18n="process.s4.t"></h3><p data-i18n="process.s4.d"></p></div>
+          <div class="step reveal" style="--d:0ms"><h3 data-i18n="process.s1.t"></h3><p data-i18n="process.s1.d"></p></div>
+          <div class="step reveal" style="--d:120ms"><h3 data-i18n="process.s2.t"></h3><p data-i18n="process.s2.d"></p></div>
+          <div class="step reveal" style="--d:240ms"><h3 data-i18n="process.s3.t"></h3><p data-i18n="process.s3.d"></p></div>
+          <div class="step reveal" style="--d:360ms"><h3 data-i18n="process.s4.t"></h3><p data-i18n="process.s4.d"></p></div>
         </div>
       </div>
     </section>
@@ -98,7 +111,7 @@
             <h2 data-i18n="cta.title"></h2>
             <p data-i18n="cta.sub"></p>
           </div>
-          <a class="btn" href="custom.html" data-i18n="cta.btn"></a>
+          <a class="btn btn-lg magnetic" href="custom.html"><span data-i18n="cta.btn"></span><span class="arrow">→</span></a>
         </div>
       </div>
     </section>
@@ -111,10 +124,10 @@
           <h2 data-i18n="faq.title"></h2>
         </div>
         <div class="faq">
-          <details><summary data-i18n="faq.q1"></summary><p data-i18n="faq.a1"></p></details>
-          <details><summary data-i18n="faq.q2"></summary><p data-i18n="faq.a2"></p></details>
-          <details><summary data-i18n="faq.q3"></summary><p data-i18n="faq.a3"></p></details>
-          <details><summary data-i18n="faq.q4"></summary><p data-i18n="faq.a4"></p></details>
+          <details class="reveal"><summary data-i18n="faq.q1"></summary><p data-i18n="faq.a1"></p></details>
+          <details class="reveal" style="--d:80ms"><summary data-i18n="faq.q2"></summary><p data-i18n="faq.a2"></p></details>
+          <details class="reveal" style="--d:160ms"><summary data-i18n="faq.q3"></summary><p data-i18n="faq.a3"></p></details>
+          <details class="reveal" style="--d:240ms"><summary data-i18n="faq.q4"></summary><p data-i18n="faq.a4"></p></details>
         </div>
       </div>
     </section>
