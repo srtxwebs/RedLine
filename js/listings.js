@@ -7,10 +7,22 @@ export const descOf = l => (getLang() === "es" && l.descEs) ? l.descEs : (l.desc
 export const createdSec = l => (l.createdAt && l.createdAt.seconds) || 0;
 export const safeUrl = u => (/^https?:\/\//i.test(String(u || "").trim()) ? String(u).trim() : "");
 
+// Remember the last list for this visit so the page shows instantly next time
+const CACHE_KEY = "listings.cache.v1";
+export function cachedListings() {
+  try { const c = JSON.parse(sessionStorage.getItem(CACHE_KEY) || "null"); return Array.isArray(c) ? c : null; } catch { return null; }
+}
+const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error("timeout"), { code: "timeout" })), ms))]);
+
 export async function fetchPublicListings() {
   if (!isConfigured) return [];
-  const snap = await fb.getDocs(fb.query(fb.collection(db, "listings"), fb.where("status", "in", ["available", "sold"])));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => createdSec(b) - createdSec(a));
+  const snap = await withTimeout(fb.getDocs(fb.query(fb.collection(db, "listings"), fb.where("status", "in", ["available", "sold"]))), 12000);
+  const list = snap.docs.map(d => {
+    const x = d.data();
+    return { id: d.id, ...x, createdAt: { seconds: (x.createdAt && x.createdAt.seconds) || 0 } };
+  }).sort((a, b) => createdSec(b) - createdSec(a));
+  try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(list)); } catch {}
+  return list;
 }
 
 export async function fetchListingImages(listingId) {
