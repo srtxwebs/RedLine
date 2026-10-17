@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>Admin panel</title>
-  <meta name="theme-color" content="#0a0a0b">
+  <meta name="theme-color" content="#08080a">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
   <script type="module" src="js/admin.js"></script>
 </head>
@@ -27,17 +27,22 @@
 
     <div class="container">
       <div class="loading" id="a-loading" data-i18n="common.loading"></div>
-      <div id="a-gate" hidden></div>
 
+      <!-- Not signed in / not admin -->
       <div id="a-denied" class="card gate" hidden>
+        <div class="gate-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        </div>
         <h2 data-i18n="admin.denied"></h2>
         <p class="muted" data-i18n="admin.deniedSub"></p>
+        <a class="btn btn-red" href="login.html?admin=1" data-i18n="login.adminTitle"></a>
       </div>
 
       <div id="a-panel" hidden>
         <div class="admin-toolbar">
           <div class="tabs" role="tablist">
-            <button type="button" class="tab active" role="tab" data-tab="bookings"><span data-i18n="admin.bookings"></span><span class="count" id="count-bookings"></span></button>
+            <button type="button" class="tab active" role="tab" data-tab="listings"><span data-i18n="admin.listings"></span><span class="count" id="count-listings"></span></button>
+            <button type="button" class="tab" role="tab" data-tab="bookings"><span data-i18n="admin.bookings"></span><span class="count" id="count-bookings"></span></button>
             <button type="button" class="tab" role="tab" data-tab="requests"><span data-i18n="admin.requests"></span><span class="count" id="count-requests"></span></button>
           </div>
           <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">
@@ -46,10 +51,79 @@
               <select id="a-filter"></select>
             </div>
             <button type="button" class="btn btn-dark btn-sm" id="a-refresh" data-i18n="admin.refresh"></button>
+            <button type="button" class="btn btn-red btn-sm" id="a-new">+ <span data-i18n="admin.newListing"></span></button>
           </div>
         </div>
         <div class="admin-list" id="a-list"></div>
       </div>
+    </div>
+
+    <!-- Listing editor -->
+    <div class="modal" id="editor" hidden role="dialog" aria-modal="true" aria-labelledby="ed-title">
+      <div class="modal-backdrop" data-ed-close></div>
+      <form class="modal-panel narrow" id="ed-form" novalidate>
+        <button type="button" class="modal-close" data-ed-close data-i18n-aria="lst.cancel">✕</button>
+        <div class="editor-body">
+          <h2 id="ed-title"></h2>
+
+          <div class="form-block">
+            <span class="field-label" data-i18n="lst.images"></span>
+            <p class="hint" style="margin:.2rem 0 .8rem" data-i18n="lst.imagesHint"></p>
+            <div class="img-editor" id="ed-images"></div>
+            <input type="file" id="ed-file" accept="image/*" multiple hidden>
+          </div>
+
+          <div class="form-block">
+            <div class="form-grid">
+              <div class="field">
+                <label for="ed-titleEn"><span data-i18n="lst.titleEn"></span><span class="req">*</span></label>
+                <input id="ed-titleEn" type="text" maxlength="90">
+              </div>
+              <div class="field">
+                <label for="ed-titleEs" data-i18n="lst.titleEs"></label>
+                <input id="ed-titleEs" type="text" maxlength="90">
+              </div>
+              <div class="field full">
+                <label for="ed-descEn" data-i18n="lst.descEn"></label>
+                <textarea id="ed-descEn" maxlength="2500" rows="4"></textarea>
+              </div>
+              <div class="field full">
+                <label for="ed-descEs" data-i18n="lst.descEs"></label>
+                <textarea id="ed-descEs" maxlength="2500" rows="4"></textarea>
+                <span class="hint" data-i18n="lst.langHint"></span>
+              </div>
+              <div class="field">
+                <label for="ed-price"><span data-i18n="lst.price"></span> (<span id="ed-cur"></span>)<span class="req">*</span></label>
+                <input id="ed-price" type="number" min="0" step="1" inputmode="numeric">
+              </div>
+              <div class="field">
+                <label for="ed-category" data-i18n="lst.category"></label>
+                <select id="ed-category"></select>
+              </div>
+              <div class="field">
+                <label for="ed-url" data-i18n="lst.url"></label>
+                <input id="ed-url" type="url" maxlength="300" placeholder="https://">
+              </div>
+              <div class="field">
+                <label for="ed-status" data-i18n="lst.status"></label>
+                <select id="ed-status">
+                  <option value="available" data-i18n="shop.available"></option>
+                  <option value="sold" data-i18n="shop.sold"></option>
+                  <option value="hidden" data-i18n="shop.hidden"></option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="editor-foot">
+            <button type="button" class="btn btn-danger btn-sm" id="ed-delete" data-i18n="lst.delete"></button>
+            <div class="right">
+              <button type="button" class="btn btn-ghost" data-ed-close data-i18n="lst.cancel"></button>
+              <button type="submit" class="btn btn-red" id="ed-save"></button>
+            </div>
+          </div>
+        </div>
+      </form>
     </div>
   </main>
 
