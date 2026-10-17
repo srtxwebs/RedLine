@@ -1,10 +1,36 @@
 import { t, esc, db, fb, onUser, getUser, getProfile, ensureSignedIn, toast, authErrorText } from "./app.js";
-import { getLang } from "./i18n.js";
+import { getLang, money } from "./i18n.js";
+import { isConfigured } from "./app.js";
+import { titleOf } from "./listings.js";
 
 const form = document.getElementById("custom-form");
 const F = form.elements; // named form fields
 const submitBtn = document.getElementById("c-submit");
 let busy = false;
+let listing = null;
+
+// Coming from "I want this website": custom.html?listing=ID
+const listingId = new URLSearchParams(location.search).get("listing");
+function renderListingBanner() {
+  const box = document.getElementById("listing-banner");
+  if (!listing) { box.hidden = true; return; }
+  box.hidden = false;
+  box.innerHTML = `${listing.thumb ? `<img src="${esc(listing.thumb)}" alt="">` : ""}
+    <div><span class="hint">${esc(t("custom.fromListing"))}</span>
+    <strong>${esc(titleOf(listing))}</strong>
+    <span class="text-red">${esc(money(listing.price || 0))}</span></div>`;
+}
+async function loadListing() {
+  if (!listingId || !isConfigured) return;
+  try {
+    const snap = await fb.getDoc(fb.doc(db, "listings", listingId));
+    if (!snap.exists()) return;
+    listing = { id: snap.id, ...snap.data() };
+    if (listing.category && !F.type.value) F.type.value = listing.category;
+    renderListingBanner();
+  } catch (e) { console.warn(e); }
+}
+loadListing();
 
 // No launch dates in the past
 const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
@@ -48,6 +74,8 @@ form.addEventListener("submit", async e => {
       deadline: v("deadline"),
       description: v("description"),
       links: v("links"),
+      listingId: listing ? listing.id : "",
+      listingTitle: listing ? (listing.titleEn || listing.titleEs || "") : "",
       status: "pending",
       lang: getLang(),
       createdAt: fb.serverTimestamp()
@@ -64,7 +92,7 @@ form.addEventListener("submit", async e => {
 });
 
 renderButton();
-window.addEventListener("langchange", renderButton);
+window.addEventListener("langchange", () => { renderButton(); renderListingBanner(); });
 
 onUser(u => {
   const p = getProfile();
