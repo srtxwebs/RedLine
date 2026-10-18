@@ -1,6 +1,6 @@
 import { t, esc, db, fb, onUser, getUser, getProfile, ensureSignedIn, toast, authErrorText } from "./app.js";
 import { getLang, money } from "./i18n.js";
-import { isConfigured } from "./app.js";
+import { isConfigured, withTimeout } from "./app.js";
 import { titleOf } from "./listings.js";
 
 const form = document.getElementById("custom-form");
@@ -23,7 +23,7 @@ function renderListingBanner() {
 async function loadListing() {
   if (!listingId || !isConfigured) return;
   try {
-    const snap = await fb.getDoc(fb.doc(db, "listings", listingId));
+    const snap = await withTimeout(fb.getDoc(fb.doc(db, "listings", listingId)), 6000);
     if (!snap.exists()) return;
     listing = { id: snap.id, ...snap.data() };
     if (listing.category && !F.type.value) F.type.value = listing.category;
@@ -60,7 +60,7 @@ form.addEventListener("submit", async e => {
 
   busy = true; renderButton();
   try {
-    await fb.addDoc(fb.collection(db, "requests"), {
+    await withTimeout(fb.addDoc(fb.collection(db, "requests"), {
       uid: user.uid,
       accountEmail: user.email,
       name: v("name"),
@@ -79,13 +79,13 @@ form.addEventListener("submit", async e => {
       status: "pending",
       lang: getLang(),
       createdAt: fb.serverTimestamp()
-    });
+    }), 15000);
     form.hidden = true;
     document.getElementById("custom-success").hidden = false;
     scrollTo({ top: 0, behavior: "smooth" });
   } catch (err) {
     console.warn(err);
-    toast(t("common.error"), "error");
+    toast(t(err.code === "timeout" ? "common.dbSlow" : "common.error"), "error");
   } finally {
     busy = false; renderButton();
   }
