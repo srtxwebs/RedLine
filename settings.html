@@ -17,49 +17,105 @@
 
   <main>
     <section class="page-head">
-      <div class="container-narrow">
+      <div class="container">
         <span class="eyebrow" data-i18n="settings.eyebrow"></span>
         <h1 data-i18n="settings.title"></h1>
+        <p class="muted" data-i18n="settings.sub"></p>
+        <div class="sys-line" aria-hidden="true"><span>&gt; preferences.load()</span><span class="ok">OK</span><span class="cursor">_</span></div>
       </div>
     </section>
 
-    <div class="container-narrow settings-stack">
-      <!-- Language -->
-      <section class="card">
-        <h3 data-i18n="settings.language"></h3>
-        <p class="muted" style="margin:0" data-i18n="settings.languageSub"></p>
-        <div class="lang-cards">
-          <button type="button" class="lang-card" data-lang-card="en">
-            <span class="lang-code">EN</span>
-            <strong data-i18n="lang.en"></strong>
-          </button>
-          <button type="button" class="lang-card" data-lang-card="es">
-            <span class="lang-code">ES</span>
-            <strong data-i18n="lang.es"></strong>
-          </button>
-        </div>
-      </section>
+    <div class="container settings-layout">
+      <!-- Side menu -->
+      <nav class="set-nav" id="set-nav" aria-label="Settings">
+        <span class="set-nav-ind" aria-hidden="true"></span>
+        <a href="#s-language" class="active"><span class="n">01</span><span data-i18n="settings.language"></span></a>
+        <a href="#s-appearance"><span class="n">02</span><span data-i18n="settings.appearance"></span></a>
+        <a href="#s-effects"><span class="n">03</span><span data-i18n="settings.effects"></span></a>
+        <a href="#s-account"><span class="n">04</span><span data-i18n="settings.account"></span></a>
+        <button type="button" class="set-reset" id="s-reset"><span aria-hidden="true">↺</span> <span data-i18n="settings.reset"></span></button>
+      </nav>
 
-      <!-- Display -->
-      <section class="card">
-        <h3 data-i18n="settings.display"></h3>
-        <div class="setting-row">
-          <div>
-            <p><strong data-i18n="settings.motion"></strong></p>
-            <p class="muted small" data-i18n="settings.motionSub"></p>
+      <div class="set-main">
+        <!-- Language -->
+        <section class="card set-card reveal" id="s-language">
+          <header class="set-head">
+            <span class="set-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg></span>
+            <div><h2 data-i18n="settings.language"></h2><p class="muted" data-i18n="settings.languageSub"></p></div>
+          </header>
+          <div class="lang-grid" id="lang-grid"></div>
+        </section>
+
+        <!-- Appearance -->
+        <section class="card set-card reveal" id="s-appearance">
+          <header class="set-head">
+            <span class="set-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5c0-4.1-4-7.4-9-7.4z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg></span>
+            <div><h2 data-i18n="settings.appearance"></h2><p class="muted" data-i18n="settings.appearanceSub"></p></div>
+          </header>
+
+          <div class="set-row">
+            <div><strong data-i18n="settings.accent"></strong></div>
+            <div class="accent-row" id="accent-row" role="radiogroup" data-i18n-aria="settings.accent">
+              <button type="button" class="accent-sw" data-accent="red" role="radio"><i></i><span data-i18n="color.red"></span></button>
+              <button type="button" class="accent-sw" data-accent="crimson" role="radio"><i></i><span data-i18n="color.crimson"></span></button>
+              <button type="button" class="accent-sw" data-accent="ember" role="radio"><i></i><span data-i18n="color.ember"></span></button>
+              <button type="button" class="accent-sw" data-accent="carbon" role="radio"><i></i><span data-i18n="color.carbon"></span></button>
+            </div>
           </div>
-          <label class="switch">
-            <input type="checkbox" id="s-motion" data-i18n-aria="settings.motion">
-            <span></span>
-          </label>
-        </div>
-      </section>
 
-      <!-- Account -->
-      <section class="card">
-        <h3 data-i18n="settings.account"></h3>
-        <div id="s-account"><p class="muted" data-i18n="common.loading"></p></div>
-      </section>
+          <div class="set-row">
+            <div><strong data-i18n="settings.textSize"></strong></div>
+            <div class="seg" id="size-seg" role="radiogroup" data-i18n-aria="settings.textSize">
+              <span class="seg-knob" aria-hidden="true"></span>
+              <button type="button" role="radio" data-size="normal"><span class="aa sm">Aa</span><span data-i18n="settings.size.normal"></span></button>
+              <button type="button" role="radio" data-size="large"><span class="aa lg">Aa</span><span data-i18n="settings.size.large"></span></button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Effects -->
+        <section class="card set-card reveal" id="s-effects">
+          <header class="set-head">
+            <span class="set-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h10M3 12h18M8 17h13"/><path d="M16 4v6M5 14v6"/></svg></span>
+            <div><h2 data-i18n="settings.effects"></h2><p class="muted" data-i18n="settings.effectsSub"></p></div>
+          </header>
+
+          <div class="glitch-preview" id="glitch-preview" aria-hidden="true">
+            <span class="gp-label" data-i18n="settings.preview"></span>
+            <div class="gp-word" id="gp-word"></div>
+            <div class="gp-bars"><i></i><i></i><i></i></div>
+          </div>
+
+          <div class="set-row">
+            <div><strong data-i18n="settings.glitch"></strong><p class="muted small" data-i18n="settings.glitchSub"></p></div>
+            <div class="seg seg-3" id="glitch-seg" role="radiogroup" data-i18n-aria="settings.glitch">
+              <span class="seg-knob" aria-hidden="true"></span>
+              <button type="button" role="radio" data-glitch="off" data-i18n="settings.glitch.off"></button>
+              <button type="button" role="radio" data-glitch="low" data-i18n="settings.glitch.low"></button>
+              <button type="button" role="radio" data-glitch="high" data-i18n="settings.glitch.high"></button>
+            </div>
+          </div>
+
+          <div class="set-row">
+            <div><strong data-i18n="settings.motion"></strong><p class="muted small" data-i18n="settings.motionSub"></p></div>
+            <label class="switch">
+              <input type="checkbox" id="s-motion" data-i18n-aria="settings.motion">
+              <span></span>
+            </label>
+          </div>
+        </section>
+
+        <!-- Account -->
+        <section class="card set-card reveal" id="s-account">
+          <header class="set-head">
+            <span class="set-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span>
+            <div><h2 data-i18n="settings.account"></h2><p class="muted" data-i18n="settings.accountSub"></p></div>
+          </header>
+          <div id="s-account-body"><p class="muted" data-i18n="common.loading"></p></div>
+        </section>
+
+        <p class="hint set-foot" data-i18n="settings.status"></p>
+      </div>
     </div>
   </main>
 
