@@ -1,5 +1,5 @@
-import { SITE, t, esc, reduceMotion, glitchLevel } from "./app.js";
-import { applyTranslations, money } from "./i18n.js";
+import { SITE, t, esc, reduceMotion, glitchLevel, glitchEl } from "./app.js";
+import { applyTranslations, money, locale } from "./i18n.js";
 import { fetchPublicListings, cardHTML, wireCards } from "./listings.js";
 
 /* =========================================================
@@ -262,27 +262,6 @@ function ripOpen() {
 /* =========================================================
    3) Page content: services, packages, featured, marquee
    ========================================================= */
-const ICONS = {
-  landing: '<path d="M4 5h16v14H4z"/><path d="M4 9h16M8 13h8M8 16h5"/>',
-  business: '<path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6M9 10h.01M15 10h.01"/>',
-  store: '<path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6L5 3H2"/><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/>',
-  apps: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 14v7M14 17.5h7"/>',
-  seo: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11l2 2 4-4"/>',
-  care: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>'
-};
-
-function renderServices() {
-  const grid = document.getElementById("services-grid");
-  grid.innerHTML = Object.keys(ICONS).map((k, i) => `
-    <article class="card spot tilt service reveal" style="--d:${i * 70}ms">
-      <span class="service-num">0${i + 1}</span>
-      <div class="service-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k]}</svg></div>
-      <h3 data-i18n="svc.${k}.t"></h3>
-      <p data-i18n="svc.${k}.d"></p>
-    </article>`).join("");
-  applyTranslations(grid);
-}
-
 function renderPackages() {
   const grid = document.getElementById("packages-grid");
   const wasIn = grid.dataset.rendered === "1";
@@ -304,6 +283,8 @@ function renderPackages() {
 function renderMarquee() {
   const items = [1, 2, 3, 4, 5, 6, 7].map(n => `<span>${esc(t(`marq.${n}`))}</span>`).join("");
   document.getElementById("marquee-track").innerHTML = items + items + items + items;
+  const rev = [7, 6, 5, 4, 3, 2, 1].map(n => `<span>${esc(t(`marq.${n}`))}</span>`).join("");
+  document.getElementById("marquee-track-2").innerHTML = rev + rev + rev + rev;
 }
 
 let featured = [];
@@ -356,7 +337,6 @@ function counters() {
 resizeRain();
 buildPaper(0.001);
 ripOpen();
-renderServices();
 renderPackages();
 renderMarquee();
 syncGlitchText();
@@ -392,3 +372,124 @@ window.addEventListener("resize", () => {
 window.addEventListener("langchange", () => {
   renderPackages(); renderMarquee(); syncGlitchText(); renderFeatured();
 });
+
+/* =========================================================
+   5) Hero terminal: types a fake deploy log
+   ========================================================= */
+const TERM_LINES = [
+  ["$ ", "npm run build"],
+  ["✓ ", "design ........ 100%"],
+  ["✓ ", "mobile ........ 100%"],
+  ["✓ ", "seo ........... 98"],
+  ["✓ ", "speed ......... 0.8s"],
+  ["→ ", "deploy: LIVE ●"]
+];
+async function typeTerminal() {
+  const box = document.getElementById("hero-term");
+  if (!box) return;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  while (true) {
+    box.innerHTML = "";
+    for (const [pre, txt] of TERM_LINES) {
+      const line = document.createElement("div");
+      line.innerHTML = `<span class="p">${esc(pre)}</span><span class="t"></span>`;
+      box.appendChild(line);
+      const el = line.querySelector(".t");
+      if (reduceMotion()) { el.textContent = txt; continue; }
+      for (let i = 1; i <= txt.length; i++) { el.textContent = txt.slice(0, i); await sleep(pre === "$ " ? 55 : 18); }
+      await sleep(260);
+    }
+    await sleep(4200);
+  }
+}
+
+/* =========================================================
+   6) Manifesto: each word lights up as you scroll through it
+   ========================================================= */
+let mWords = [];
+function renderManifesto() {
+  const el = document.getElementById("manifesto-text");
+  const raw = t("home.manifesto");
+  el.setAttribute("aria-label", raw.replace(/[\[\]]/g, ""));
+  el.innerHTML = raw.split(/\s+/).map(w => {
+    const hl = /^\[.*\]/.test(w);
+    const clean = w.replace(/[\[\]]/g, "");
+    return `<span class="mw${hl ? " hl" : ""}" aria-hidden="true">${esc(clean)}</span>`;
+  }).join(" ");
+  mWords = [...el.querySelectorAll(".mw")];
+  updateManifesto();
+}
+function updateManifesto() {
+  const sec = document.getElementById("manifesto");
+  if (!sec || !mWords.length) return;
+  const r = sec.getBoundingClientRect();
+  const p = Math.min(1, Math.max(0, (innerHeight * 0.85 - r.top) / (r.height * 0.9)));
+  const lit = reduceMotion() ? mWords.length : Math.round(p * mWords.length * 1.1);
+  mWords.forEach((w, i) => w.classList.toggle("on", i < lit));
+}
+
+/* =========================================================
+   7) Process timeline: red line fills while scrolling
+   ========================================================= */
+const tl = document.getElementById("timeline");
+const tlFill = document.getElementById("tl-fill");
+const tlSteps = [...document.querySelectorAll(".tl-step")];
+function updateTimeline() {
+  if (!tl) return;
+  const r = tl.getBoundingClientRect();
+  const p = reduceMotion() ? 1 : Math.min(1, Math.max(0, (innerHeight * 0.75 - r.top) / (r.height + innerHeight * 0.25)));
+  tlFill.style.transform = window.innerWidth > 860 ? `scaleX(${p})` : `scaleY(${p})`;
+  tlSteps.forEach((s, i) => s.classList.toggle("lit", p >= i / tlSteps.length + 0.02));
+}
+
+/* =========================================================
+   8) Bento tiles: small live animations
+   ========================================================= */
+function bentoLife() {
+  const cart = document.getElementById("cart-count");
+  const sales = document.getElementById("sales-num");
+  const plus = document.querySelector(".plus1");
+  let n = 3, total = 12480;
+  setInterval(() => {
+    if (document.hidden || reduceMotion()) return;
+    n = n >= 9 ? 1 : n + 1;
+    total += 180 + Math.round(Math.random() * 900);
+    cart.textContent = n;
+    sales.textContent = new Intl.NumberFormat(locale()).format(total);
+    plus.classList.remove("go"); void plus.offsetWidth; plus.classList.add("go");
+    glitchEl(cart, 300);
+  }, 2400);
+
+  const cal = document.getElementById("mini-cal");
+  cal.innerHTML = Array.from({ length: 21 }, () => "<i></i>").join("");
+  const cells = [...cal.children];
+  setInterval(() => {
+    if (document.hidden || reduceMotion()) return;
+    cells.forEach(c => c.classList.remove("on"));
+    for (let k = 0; k < 4; k++) cells[(Math.random() * cells.length) | 0].classList.add("on");
+    document.querySelectorAll(".art-apps .tg").forEach(tg => { if (Math.random() < .5) tg.classList.toggle("on"); });
+  }, 1600);
+}
+
+/* =========================================================
+   9) Big CTA word glitches when it comes into view
+   ========================================================= */
+const mega = document.getElementById("mega-word");
+function syncMega() { mega.setAttribute("data-text", mega.textContent); }
+new IntersectionObserver(([e]) => {
+  if (e.isIntersecting) { mega.classList.add("in"); setTimeout(() => glitchEl(mega, 500), 700); }
+}, { threshold: .4 }).observe(mega);
+
+let sRaf = 0;
+window.addEventListener("scroll", () => {
+  if (sRaf) return;
+  sRaf = requestAnimationFrame(() => { sRaf = 0; updateManifesto(); updateTimeline(); });
+}, { passive: true });
+window.addEventListener("resize", () => { updateManifesto(); updateTimeline(); });
+
+renderManifesto();
+updateTimeline();
+syncMega();
+bentoLife();
+typeTerminal();
+window.addEventListener("langchange", () => { renderManifesto(); syncMega(); });
