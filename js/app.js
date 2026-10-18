@@ -110,6 +110,12 @@ export function authErrorText(e) {
   return t("login.error");
 }
 
+// Stop waiting for the database after `ms` milliseconds (never leave a page stuck loading)
+export const withTimeout = (promise, ms = 8000) => Promise.race([
+  promise,
+  new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error("timeout"), { code: "timeout" })), ms))
+]);
+
 export const reduceMotion = () =>
   document.documentElement.classList.contains("reduce-motion") ||
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -254,9 +260,30 @@ const NAV_ICONS = {
 };
 const navIcon = k => `<svg class="nav-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${NAV_ICONS[k]}</svg>`;
 
+let navCount = 0;
 function navLink(href, key, page, extra = "") {
   const active = document.body.dataset.page === page;
-  return `<a href="${href}" class="${active ? "active" : ""} ${extra}"${active ? ' aria-current="page"' : ""}>${navIcon(page)}<span data-i18n="${key}"></span></a>`;
+  const num = String(++navCount).padStart(2, "0");
+  return `<a href="${href}" class="${active ? "active" : ""} ${extra}"${active ? ' aria-current="page"' : ""}>${navIcon(page)}<span class="nav-num" aria-hidden="true">${num}</span><span class="nav-label" data-i18n="${key}"></span></a>`;
+}
+
+// Hover effect: the label "decodes" from random symbols, like corrupted code
+const GLYPHS = "!<>-_\\/[]{}=+*^?#%&$01";
+function scramble(el) {
+  if (reduceMotion() || el.dataset.busy) return;
+  const final = el.textContent;
+  el.dataset.busy = "1";
+  el.style.minWidth = `${el.offsetWidth}px`;
+  let frame = 0;
+  const total = 14;
+  const tick = () => {
+    frame++;
+    const done = Math.floor((frame / total) * final.length);
+    el.textContent = final.split("").map((ch, i) => (i < done || ch === " " ? ch : GLYPHS[(Math.random() * GLYPHS.length) | 0])).join("");
+    if (frame < total) requestAnimationFrame(tick);
+    else { el.textContent = t(el.getAttribute("data-i18n")) || final; el.style.minWidth = ""; delete el.dataset.busy; }
+  };
+  requestAnimationFrame(tick);
 }
 
 const brandHTML = () => {
@@ -292,8 +319,9 @@ function mountHeader() {
           <span></span><span></span>
         </button>
       </div>
-      <span class="nav-progress" aria-hidden="true"></span>
     </div>
+    <span class="bar-scan" aria-hidden="true"></span>
+    <span class="nav-progress" aria-hidden="true"></span>
   </header>`;
 
   host.querySelector(".admin-link").hidden = true;
@@ -325,7 +353,7 @@ function mountHeader() {
       const y = window.scrollY;
       header.classList.toggle("scrolled", y > 24);
       const max = document.documentElement.scrollHeight - window.innerHeight;
-      shell.style.setProperty("--p", max > 0 ? (y / max).toFixed(4) : 0);
+      header.style.setProperty("--p", max > 0 ? (y / max).toFixed(4) : 0);
       ticking = false;
     });
   };
@@ -346,7 +374,10 @@ function mountHeader() {
     if (instant) { void ind.offsetWidth; ind.style.transition = ""; }
   };
   const activeLink = () => nav.querySelector("a.active:not([hidden])");
-  nav.querySelectorAll("a").forEach(a => a.addEventListener("mouseenter", () => moveTo(a)));
+  nav.querySelectorAll("a").forEach(a => a.addEventListener("mouseenter", () => {
+    moveTo(a);
+    if (window.innerWidth > 860) scramble(a.querySelector(".nav-label"));
+  }));
   nav.addEventListener("mouseleave", () => moveTo(activeLink()));
   window.addEventListener("resize", () => moveTo(activeLink(), true));
   window.addEventListener("langchange", () => requestAnimationFrame(() => moveTo(activeLink(), true)));
@@ -518,7 +549,7 @@ function setupPageTransitions() {
 async function loadOrCreateProfile(u) {
   const ref = fb.doc(db, "users", u.uid);
   try {
-    const snap = await fb.getDoc(ref);
+    const snap = await withTimeout(fb.getDoc(ref), 6000);
     if (!snap.exists()) {
       let pending = "";
       try { pending = sessionStorage.getItem("pendingName") || ""; sessionStorage.removeItem("pendingName"); } catch {}
@@ -535,7 +566,7 @@ async function loadOrCreateProfile(u) {
         lang: getLang(),
         createdAt: fb.serverTimestamp()
       };
-      await fb.setDoc(ref, data);
+      fb.setDoc(ref, data).catch(e => console.warn("Profile save failed:", e));
       return { ...data, createdAt: new Date() };
     }
     const p = snap.data();
