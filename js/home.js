@@ -1,4 +1,4 @@
-import { SITE, t, esc, reduceMotion } from "./app.js";
+import { SITE, t, esc, reduceMotion, glitchLevel } from "./app.js";
 import { applyTranslations, money } from "./i18n.js";
 import { fetchPublicListings, cardHTML, wireCards } from "./listings.js";
 
@@ -32,6 +32,17 @@ function newColumn(x, startRandom) {
   };
 }
 
+// Colors follow the accent picked in Settings
+let C_HEAD = "#ff3b2b", C_TAIL = "#7a0a05", C_SPLIT = "rgba(255, 30, 20, .9)";
+function readColors() {
+  const cs = getComputedStyle(document.documentElement);
+  C_HEAD = cs.getPropertyValue("--red-2").trim() || C_HEAD;
+  C_TAIL = cs.getPropertyValue("--red-deep").trim() || C_TAIL;
+  C_SPLIT = C_HEAD;
+}
+readColors();
+window.addEventListener("prefchange", () => { readColors(); });
+
 function resizeRain() {
   const r = canvas.getBoundingClientRect();
   DPR = Math.min(window.devicePixelRatio || 1, 1.5);
@@ -64,10 +75,10 @@ function drawFrame(now) {
     if (c.split) {
       ctx.globalCompositeOperation = "lighter";
       ctx.fillStyle = "rgba(0, 255, 255, .55)"; ctx.fillText(ch, c.x - 2, c.y);
-      ctx.fillStyle = "rgba(255, 30, 20, .9)"; ctx.fillText(ch, c.x + 2, c.y);
+      ctx.fillStyle = C_SPLIT; ctx.fillText(ch, c.x + 2, c.y);
       ctx.globalCompositeOperation = "source-over";
     } else {
-      ctx.fillStyle = head ? (Math.random() < 0.08 ? "#ffffff" : "#ff3b2b") : "#7a0a05";
+      ctx.fillStyle = head ? (Math.random() < 0.08 ? "#ffffff" : C_HEAD) : C_TAIL;
       ctx.fillText(ch, c.x, c.y);
     }
     c.y += FS * (rep ? 1 : c.speed);
@@ -75,9 +86,11 @@ function drawFrame(now) {
   }
 
   // occasional big glitch burst: tear horizontal slices and shift them
-  if (now > nextGlitch) {
+  const lvl = glitchLevel();
+  if (lvl === "off") { glitchUntil = 0; nextGlitch = now + 2000; }
+  else if (now > nextGlitch) {
     glitchUntil = now + rand(90, 260);
-    nextGlitch = now + rand(1400, 4200);
+    nextGlitch = now + (lvl === "high" ? rand(700, 2200) : rand(1600, 4800));
   }
   if (now < glitchUntil) {
     const slices = (Math.random() * 5 + 2) | 0;
@@ -86,8 +99,9 @@ function drawFrame(now) {
       ctx.drawImage(canvas, 0, sy * DPR, W * DPR, sh * DPR, dx, sy, W, sh);
     }
     if (Math.random() < 0.5) {
-      ctx.fillStyle = `rgba(255, 43, 28, ${rand(0.08, 0.25)})`;
+      ctx.globalAlpha = rand(0.08, 0.25); ctx.fillStyle = C_HEAD;
       ctx.fillRect(0, rand(0, H), W, rand(2, 10));
+      ctx.globalAlpha = 1;
     }
     if (Math.random() < 0.3) {
       ctx.fillStyle = "rgba(255,255,255,.85)";
@@ -353,6 +367,21 @@ loadFeatured();
 // Only animate the code while the hero is on screen
 new IntersectionObserver(([e]) => (e.isIntersecting ? startRain() : stopRain()), { threshold: 0 }).observe(document.getElementById("hero"));
 document.addEventListener("visibilitychange", () => (document.hidden ? stopRain() : startRain()));
+
+// Paper and text drift apart a little while scrolling (depth effect)
+const heroEl = document.getElementById("hero");
+const heroCopy = heroEl.querySelector(".hero-inner");
+let pRaf = 0;
+window.addEventListener("scroll", () => {
+  if (pRaf || reduceMotion()) return;
+  pRaf = requestAnimationFrame(() => {
+    pRaf = 0;
+    const y = Math.min(window.scrollY, innerHeight);
+    paper.style.transform = `translate3d(0, ${y * 0.18}px, 0)`;
+    heroCopy.style.transform = `translate3d(0, ${y * 0.32}px, 0)`;
+    heroCopy.style.opacity = String(Math.max(0, 1 - y / (innerHeight * 0.8)));
+  });
+}, { passive: true });
 
 let rT;
 window.addEventListener("resize", () => {
