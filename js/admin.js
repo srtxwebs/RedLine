@@ -1,4 +1,4 @@
-import { SITE, t, esc, db, fb, onUser, isAdmin, toast, imageToDataURL } from "./app.js";
+import { SITE, t, esc, db, fb, onUser, isAdmin, toast, imageToDataURL, withTimeout } from "./app.js";
 import { applyTranslations, money, fmtDay, fmtDate, fmtTime } from "./i18n.js";
 import { titleOf, createdSec, fetchListingImages, safeUrl } from "./listings.js";
 
@@ -142,9 +142,9 @@ async function load() {
   const get = async (col, ordered) => {
     try {
       const q = ordered ? fb.query(fb.collection(db, col), fb.orderBy("createdAt", "desc")) : fb.collection(db, col);
-      const snap = await fb.getDocs(q);
+      const snap = await withTimeout(fb.getDocs(q), 12000);
       return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch (e) { console.warn(col, e); toast(t("common.error"), "error"); return []; }
+    } catch (e) { console.warn(col, e); toast(t(e.code === "timeout" ? "common.dbSlow" : "common.error"), "error"); return []; }
   };
   const [listings, bookings, requests] = await Promise.all([get("listings", false), get("bookings", true), get("requests", true)]);
   state.data = { listings: listings.sort((a, b) => createdSec(b) - createdSec(a)), bookings, requests };
@@ -334,7 +334,7 @@ $("ed-form").addEventListener("submit", async e => {
     };
     if (isNew) data.createdAt = fb.serverTimestamp();
     batch.set(ref, data, { merge: true });
-    await batch.commit();
+    await withTimeout(batch.commit(), 30000);
 
     newIds.forEach(([im, id]) => { im.id = id; });
     ed.removed = [];
