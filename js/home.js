@@ -44,16 +44,17 @@ function resizeRain() {
   cols = Array.from({ length: count }, (_, n) => newColumn(n * FS * 0.95, true));
   ctx.fillStyle = "#050506";
   ctx.fillRect(0, 0, W, H);
+  for (let i = 0; i < 40; i++) drawFrame(0);
 }
 
 function drawFrame(now) {
   // fade previous frame → trails
-  ctx.fillStyle = "rgba(5, 5, 6, 0.11)";
+  ctx.fillStyle = "rgba(5, 5, 6, 0.07)";
   ctx.fillRect(0, 0, W, H);
   ctx.font = `600 ${FS}px "JetBrains Mono", ui-monospace, monospace`;
   ctx.textBaseline = "top";
 
-  for (const c of cols) {
+  for (const c of cols) for (let rep = 0; rep < 2; rep++) {
     let ch = c.text[c.i % c.text.length];
     c.i++;
     if (c.i >= c.text.length && Math.random() < 0.3) { c.text = pick(SNIPPETS); c.i = 0; }
@@ -69,8 +70,8 @@ function drawFrame(now) {
       ctx.fillStyle = head ? (Math.random() < 0.08 ? "#ffffff" : "#ff3b2b") : "#7a0a05";
       ctx.fillText(ch, c.x, c.y);
     }
-    c.y += FS * c.speed;
-    if (c.y > H + 40) Object.assign(c, newColumn(c.x, false));
+    c.y += FS * (rep ? 1 : c.speed);
+    if (c.y > H + 40) { Object.assign(c, newColumn(c.x, false)); break; }
   }
 
   // occasional big glitch burst: tear horizontal slices and shift them
@@ -151,7 +152,7 @@ function holeSpecs() {
     w, h,
     holes: [
       { cx: w * 0.75, cy: h * 0.5, rx: w * 0.23, ry: h * 0.34, seed: 11, flap: true },
-      { cx: w * 0.47, cy: h * 0.86, rx: w * 0.07, ry: h * 0.045, seed: 23, flap: false }
+      { cx: w * 0.97, cy: h * 0.93, rx: w * 0.06, ry: h * 0.07, seed: 23, flap: false }
     ]
   };
 }
@@ -206,7 +207,7 @@ function buildPaper(prog = 1) {
       <g mask="url(#tearMask)">
         <rect id="paper-base" fill="url(#paperShade)"/>
         <rect id="paper-grain" fill="#fff" filter="url(#grain)"/>
-        <path id="paper-rim" fill="none" stroke="var(--paper-edge)" stroke-width="9" filter="url(#fibers)" opacity=".92"/>
+        <path id="paper-rim" fill="none" stroke="#e8e0d2" stroke-width="9" filter="url(#fibers)" opacity=".92"/>
       </g>
       <g clip-path="url(#holeClip)">
         <path id="hole-shadow" fill="none" stroke="#000" stroke-width="46" filter="url(#soft)" opacity=".9"/>
@@ -225,7 +226,7 @@ function buildPaper(prog = 1) {
   flaps.innerHTML = prog > 0.6 ? shapes.filter(s => s.flap).map(s => {
     const d = flapPath(s.pts);
     return `<path d="${d}" fill="url(#flapGrad)" opacity="${Math.min(1, (prog - 0.6) * 2.5)}"/>
-            <path d="${d}" fill="none" stroke="var(--paper-edge)" stroke-width="3" filter="url(#fibers)" opacity=".7"/>`;
+            <path d="${d}" fill="none" stroke="#e8e0d2" stroke-width="3" filter="url(#fibers)" opacity=".7"/>`;
   }).join("") : "";
 }
 
@@ -259,7 +260,7 @@ const ICONS = {
 function renderServices() {
   const grid = document.getElementById("services-grid");
   grid.innerHTML = Object.keys(ICONS).map((k, i) => `
-    <article class="card spot service reveal" style="--d:${i * 70}ms">
+    <article class="card spot tilt service reveal" style="--d:${i * 70}ms">
       <span class="service-num">0${i + 1}</span>
       <div class="service-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k]}</svg></div>
       <h3 data-i18n="svc.${k}.t"></h3>
