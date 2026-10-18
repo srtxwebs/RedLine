@@ -5,11 +5,9 @@ export const SITE = {
   // Your business name (shown in the logo, tab title and footer)
   brand: "RedLine Webs",
 
-  // ---- ADMIN ACCESS ----
-  // Admin username login (login.html → "Admin" tab).
-  // The username "admin1100" signs in as the Firebase account admin1100@redline.admin
-  // ⚠️ The PASSWORD is NOT stored here (this code is public). You set it in
-  //    Firebase → Authentication → Users → Add user (see README.md).
+  // ---- OWNER ACCESS ----
+  // Typing this username (instead of an email) on the sign-in page signs in as
+  // <username>@<adminLoginDomain>. The password is NOT stored here.
   adminUsers: ["admin1100"],
   adminLoginDomain: "redline.admin",
 
