@@ -1,14 +1,20 @@
-import { SITE, t, esc, toast, isConfigured } from "./app.js";
+import { SITE, t, esc, toast, isConfigured, reduceMotion } from "./app.js";
 import { fetchPublicListings, cachedListings, cardHTML, wireCards, openListing, createdSec } from "./listings.js";
 
 const state = { list: [], cat: "", sort: "new", loaded: false };
 const $ = id => document.getElementById(id);
 
+// Animate cards moving into their new places when filtering / sorting
+function smooth(update) {
+  if (document.startViewTransition && !reduceMotion() && state.rendered) document.startViewTransition(update);
+  else update();
+}
+
 function renderFilters() {
   const cats = SITE.listingCategories.filter(c => state.list.some(l => l.category === c));
   const chip = (val, label) => `<button type="button" class="filter-chip${state.cat === val ? " active" : ""}" data-cat="${esc(val)}" aria-pressed="${state.cat === val}">${esc(label)}</button>`;
   $("filters").innerHTML = chip("", t("shop.all")) + cats.map(c => chip(c, t(`type.${c}`))).join("");
-  $("filters").querySelectorAll("[data-cat]").forEach(b => b.addEventListener("click", () => { state.cat = b.dataset.cat; render(); }));
+  $("filters").querySelectorAll("[data-cat]").forEach(b => b.addEventListener("click", () => smooth(() => { state.cat = b.dataset.cat; render(); })));
 }
 
 function render() {
@@ -28,10 +34,12 @@ function render() {
     return;
   }
   grid.innerHTML = items.map(cardHTML).join("");
+  if (state.rendered) grid.querySelectorAll(".reveal").forEach(el => el.classList.add("in"));
+  state.rendered = true;
   wireCards(grid, items);
 }
 
-$("sort").addEventListener("change", e => { state.sort = e.target.value; render(); });
+$("sort").addEventListener("change", e => smooth(() => { state.sort = e.target.value; render(); }));
 window.addEventListener("langchange", render);
 
 async function load() {
