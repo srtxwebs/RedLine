@@ -40,15 +40,29 @@
         </div>
       </div>
 
-      <a class="scroll-cue" href="#services"><span data-i18n="hero.scroll"></span><i></i></a>
+      <div class="hero-term" aria-hidden="true">
+        <div class="ht-bar"><i></i><i></i><i></i><span>deploy.sh</span></div>
+        <pre class="ht-body" id="hero-term"></pre>
+      </div>
+
+      <a class="scroll-cue" href="#manifesto"><span data-i18n="hero.scroll"></span><i></i></a>
     </section>
 
-    <!-- Red tape strip -->
-    <div class="marquee" aria-hidden="true">
-      <div class="marquee-track" id="marquee-track"></div>
+    <!-- Two crossing tapes -->
+    <div class="tapes" aria-hidden="true">
+      <div class="marquee tape-b"><div class="marquee-track" id="marquee-track-2"></div></div>
+      <div class="marquee tape-a"><div class="marquee-track" id="marquee-track"></div></div>
     </div>
 
-    <!-- SERVICES -->
+    <!-- MANIFESTO: words light up while scrolling -->
+    <section class="manifesto" id="manifesto">
+      <div class="container">
+        <span class="eyebrow" data-i18n="services.eyebrow"></span>
+        <p class="manifesto-text" id="manifesto-text"></p>
+      </div>
+    </section>
+
+    <!-- SERVICES: animated bento grid -->
     <section class="section" id="services">
       <div class="container">
         <div class="section-head reveal">
@@ -56,7 +70,62 @@
           <h2 data-i18n="services.title"></h2>
           <p class="muted" data-i18n="services.sub"></p>
         </div>
-        <div class="grid-3" id="services-grid"></div>
+        <div class="bento">
+          <article class="card spot tilt tile t-landing reveal">
+            <div class="tile-art art-landing" aria-hidden="true">
+              <div class="mini-browser">
+                <div class="mb-bar"><i></i><i></i><i></i><span class="mb-url"></span></div>
+                <div class="mb-body">
+                  <span class="mb-h1"></span><span class="mb-h2"></span>
+                  <span class="mb-cta">→</span>
+                  <div class="mb-cards"><i></i><i></i><i></i></div>
+                </div>
+                <svg class="mb-cursor" viewBox="0 0 24 24" width="22" height="22"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.2"/></svg>
+              </div>
+            </div>
+            <div class="tile-txt"><span class="tile-num">01</span><h3 data-i18n="svc.landing.t"></h3><p data-i18n="svc.landing.d"></p></div>
+          </article>
+
+          <article class="card spot tilt tile t-store reveal" style="--d:80ms">
+            <div class="tile-art art-store" aria-hidden="true">
+              <div class="cart"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6L5 3H2"/><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/></svg><b id="cart-count">3</b><em class="plus1">+1</em></div>
+              <div class="products"><i></i><i></i><i></i><i></i></div>
+              <div class="sales"><span>$</span><strong id="sales-num">12,480</strong></div>
+            </div>
+            <div class="tile-txt"><span class="tile-num">02</span><h3 data-i18n="svc.store.t"></h3><p data-i18n="svc.store.d"></p></div>
+          </article>
+
+          <article class="card spot tilt tile t-seo reveal" style="--d:160ms">
+            <div class="tile-art art-seo" aria-hidden="true">
+              <div class="bars"><i style="--h:30%"></i><i style="--h:45%"></i><i style="--h:38%"></i><i style="--h:62%"></i><i style="--h:74%"></i><i style="--h:96%"></i></div>
+              <span class="seo-score">100</span>
+            </div>
+            <div class="tile-txt"><span class="tile-num">03</span><h3 data-i18n="svc.seo.t"></h3><p data-i18n="svc.seo.d"></p></div>
+          </article>
+
+          <article class="card spot tilt tile t-business reveal">
+            <div class="tile-art art-business" aria-hidden="true">
+              <div class="map"><span class="pin"></span><span class="pin-ring"></span></div>
+            </div>
+            <div class="tile-txt"><span class="tile-num">04</span><h3 data-i18n="svc.business.t"></h3><p data-i18n="svc.business.d"></p></div>
+          </article>
+
+          <article class="card spot tilt tile t-care reveal" style="--d:80ms">
+            <div class="tile-art art-care" aria-hidden="true">
+              <svg class="spin" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
+              <ul class="checks"><li></li><li></li><li></li></ul>
+            </div>
+            <div class="tile-txt"><span class="tile-num">05</span><h3 data-i18n="svc.care.t"></h3><p data-i18n="svc.care.d"></p></div>
+          </article>
+
+          <article class="card spot tilt tile t-apps reveal" style="--d:160ms">
+            <div class="tile-art art-apps" aria-hidden="true">
+              <div class="cal" id="mini-cal"></div>
+              <div class="toggles"><span class="tg"></span><span class="tg on"></span><span class="tg"></span></div>
+            </div>
+            <div class="tile-txt"><span class="tile-num">06</span><h3 data-i18n="svc.apps.t"></h3><p data-i18n="svc.apps.d"></p></div>
+          </article>
+        </div>
       </div>
     </section>
 
@@ -87,31 +156,34 @@
       </div>
     </section>
 
-    <!-- PROCESS -->
-    <section class="section section-alt">
+    <!-- PROCESS: line fills while scrolling -->
+    <section class="section section-alt" id="process">
       <div class="container">
         <div class="section-head reveal">
           <span class="eyebrow" data-i18n="process.eyebrow"></span>
           <h2 data-i18n="process.title"></h2>
         </div>
-        <div class="steps">
-          <div class="step reveal" style="--d:0ms"><h3 data-i18n="process.s1.t"></h3><p data-i18n="process.s1.d"></p></div>
-          <div class="step reveal" style="--d:120ms"><h3 data-i18n="process.s2.t"></h3><p data-i18n="process.s2.d"></p></div>
-          <div class="step reveal" style="--d:240ms"><h3 data-i18n="process.s3.t"></h3><p data-i18n="process.s3.d"></p></div>
-          <div class="step reveal" style="--d:360ms"><h3 data-i18n="process.s4.t"></h3><p data-i18n="process.s4.d"></p></div>
+        <div class="timeline" id="timeline">
+          <div class="tl-track" aria-hidden="true"><span class="tl-fill" id="tl-fill"></span></div>
+          <div class="tl-step"><span class="tl-node">01</span><h3 data-i18n="process.s1.t"></h3><p data-i18n="process.s1.d"></p></div>
+          <div class="tl-step"><span class="tl-node">02</span><h3 data-i18n="process.s2.t"></h3><p data-i18n="process.s2.d"></p></div>
+          <div class="tl-step"><span class="tl-node">03</span><h3 data-i18n="process.s3.t"></h3><p data-i18n="process.s3.d"></p></div>
+          <div class="tl-step"><span class="tl-node">04</span><h3 data-i18n="process.s4.t"></h3><p data-i18n="process.s4.d"></p></div>
         </div>
       </div>
     </section>
 
-    <!-- CTA -->
-    <section class="section">
-      <div class="container">
-        <div class="cta-band reveal">
+    <!-- BIG CTA -->
+    <section class="mega-cta" id="mega-cta">
+      <div class="mega-stripes" aria-hidden="true"></div>
+      <div class="container mega-inner">
+        <div class="mega-word" id="mega-word" data-i18n="home.cta.big"></div>
+        <div class="mega-row">
           <div>
             <h2 data-i18n="cta.title"></h2>
             <p data-i18n="cta.sub"></p>
           </div>
-          <a class="btn btn-lg magnetic" href="custom.html"><span data-i18n="cta.btn"></span><span class="arrow">→</span></a>
+          <a class="btn btn-lg mega-btn magnetic" href="custom.html"><span data-i18n="cta.btn"></span><span class="arrow">→</span></a>
         </div>
       </div>
     </section>
