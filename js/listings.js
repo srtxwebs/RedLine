@@ -1,5 +1,5 @@
 // Ready-made website listings: shared by the home page, shop page and admin.
-import { SITE, t, esc, db, fb, isConfigured } from "./app.js";
+import { SITE, t, esc, db, fb, isConfigured, reduceMotion } from "./app.js";
 import { getLang, money, applyTranslations } from "./i18n.js";
 
 export const titleOf = l => (getLang() === "es" && l.titleEs) ? l.titleEs : (l.titleEn || l.titleEs || "");
@@ -36,9 +36,9 @@ export function cardHTML(l, i = 0) {
   const title = titleOf(l);
   const url = safeUrl(l.url);
   const sold = l.status === "sold";
-  return `<article class="card spot listing-card reveal${sold ? " listing-sold" : ""}" style="--d:${(i % 6) * 80}ms" data-id="${esc(l.id)}">
+  return `<article class="card spot tilt listing-card reveal${sold ? " listing-sold" : ""}" style="--d:${(i % 6) * 80}ms;view-transition-name:lc-${esc(String(l.id).replace(/[^a-zA-Z0-9_-]/g, ""))}" data-id="${esc(l.id)}">
     <button type="button" class="listing-thumb" data-open="${esc(l.id)}" aria-label="${esc(t("shop.details"))}: ${esc(title)}">
-      ${l.thumb ? `<img src="${esc(l.thumb)}" alt="" loading="lazy">` : `<span class="no-img">&lt;/&gt;</span>`}
+      ${l.thumb ? `<img src="${esc(l.thumb)}" alt="" loading="lazy" decoding="async">` : `<span class="no-img">&lt;/&gt;</span>`}
       ${l.status !== "available" ? `<span class="listing-status ${sold ? "sold" : "hidden-st"}">${esc(statusText(l.status))}</span>` : ""}
     </button>
     <div class="listing-body">
@@ -132,18 +132,33 @@ function renderInfo() {
   applyTranslations(modal);
 }
 
-export async function openListing(l) {
+export async function openListing(l, sourceImg = null) {
   ensureModal();
   current = l;
   lastFocus = document.activeElement;
   images = l.thumb ? [l.thumb] : [];
   idx = 0;
-  renderInfo();
-  renderThumbs();
-  show(0);
-  modal.hidden = false;
-  document.body.style.overflow = "hidden";
-  modal.querySelector(".modal-close").focus();
+  const reveal = () => {
+    renderInfo();
+    renderThumbs();
+    show(0);
+    modal.hidden = false;
+    document.body.style.overflow = "hidden";
+  };
+  const galImg = modal.querySelector("#gal-img");
+  if (sourceImg && document.startViewTransition && !reduceMotion()) {
+    sourceImg.style.viewTransitionName = "listing-pic";
+    modal.querySelector(".modal-panel").classList.add("no-pop");
+    const vt = document.startViewTransition(() => {
+      sourceImg.style.viewTransitionName = "";
+      galImg.style.viewTransitionName = "listing-pic";
+      reveal();
+    });
+    vt.finished.finally(() => { galImg.style.viewTransitionName = ""; modal.querySelector(".modal-panel").classList.remove("no-pop"); });
+  } else {
+    reveal();
+  }
+  modal.querySelector(".modal-close").focus({ preventScroll: true });
   try {
     const full = await fetchListingImages(l.id);
     if (current !== l || !full.length) return;
@@ -165,6 +180,8 @@ export function closeListing() {
 export function wireCards(root, list) {
   root.querySelectorAll("[data-open]").forEach(b => b.addEventListener("click", () => {
     const l = list.find(x => x.id === b.dataset.open);
-    if (l) openListing(l);
+    const img = b.closest(".listing-card")?.querySelector(".listing-thumb img");
+    if (l) openListing(l, img);
   }));
+}
 }
