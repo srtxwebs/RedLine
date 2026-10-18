@@ -16,7 +16,7 @@ const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeo
 
 export async function fetchPublicListings() {
   if (!isConfigured) return [];
-  const snap = await withTimeout(fb.getDocs(fb.query(fb.collection(db, "listings"), fb.where("status", "in", ["available", "sold"]))), 12000);
+  const snap = await withTimeout(fb.getDocs(fb.query(fb.collection(db, "listings"), fb.where("status", "in", ["available", "sold"]))), 8000);
   const list = snap.docs.map(d => {
     const x = d.data();
     return { id: d.id, ...x, createdAt: { seconds: (x.createdAt && x.createdAt.seconds) || 0 } };
@@ -183,5 +183,4 @@ export function wireCards(root, list) {
     const img = b.closest(".listing-card")?.querySelector(".listing-thumb img");
     if (l) openListing(l, img);
   }));
-}
 }
