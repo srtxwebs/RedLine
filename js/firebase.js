@@ -1,8 +1,9 @@
-// Firebase setup (Google login, admin login + Firestore database). No need to edit this file.
+// Firebase setup (Google + email login, Firestore database). No need to edit this file.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect,
-  signInWithEmailAndPassword, signOut, onAuthStateChanged
+  signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile,
+  sendPasswordResetEmail, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection,
@@ -50,10 +51,22 @@ export async function signInGoogle() {
   }
 }
 
-// Admin login: username + password (account created in Firebase console)
-export function signInAdmin(email, password) {
+// Email + password accounts
+export function signInEmail(email, password) {
   needAuth();
   return signInWithEmailAndPassword(auth, email, password);
+}
+
+export async function createAccount(email, password, name) {
+  needAuth();
+  const cred = await createUserWithEmailAndPassword(auth, email, password);
+  if (name) { try { await updateProfile(cred.user, { displayName: name }); } catch {} }
+  return cred;
+}
+
+export function resetPassword(email) {
+  needAuth();
+  return sendPasswordResetEmail(auth, email);
 }
 
 export function signOutUser() {
