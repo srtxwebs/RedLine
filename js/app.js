@@ -1,6 +1,6 @@
 // Shared code for every page: header, footer, language switch, login state, animations, toasts.
 import { SITE } from "./config.js";
-import { t, applyTranslations, getLang, setLang, hasExplicitLang } from "./i18n.js";
+import { t, applyTranslations, getLang, setLang, hasExplicitLang, LANGS } from "./i18n.js";
 import { auth, db, fb, isConfigured, signInGoogle, signInEmail, signOutUser, onAuthStateChanged, setAuthLang } from "./firebase.js";
 
 export { SITE, t, getLang, setLang, db, fb, isConfigured };
@@ -119,6 +119,76 @@ export const withTimeout = (promise, ms = 8000) => Promise.race([
 export const reduceMotion = () =>
   document.documentElement.classList.contains("reduce-motion") ||
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// ---------- visitor preferences (saved on this device) ----------
+export const PREF_DEFAULTS = { glitch: "low", accent: "red", size: "normal", reduceMotion: "0" };
+export function getPref(k) {
+  try { return localStorage.getItem("site." + k) ?? PREF_DEFAULTS[k]; } catch { return PREF_DEFAULTS[k]; }
+}
+export function setPref(k, v) {
+  try { localStorage.setItem("site." + k, v); } catch {}
+  applyPrefs();
+  window.dispatchEvent(new CustomEvent("prefchange", { detail: { k, v } }));
+}
+export function resetPrefs() {
+  Object.keys(PREF_DEFAULTS).forEach(k => { try { localStorage.removeItem("site." + k); } catch {} });
+  applyPrefs();
+  window.dispatchEvent(new CustomEvent("prefchange", { detail: {} }));
+}
+export function applyPrefs() {
+  const h = document.documentElement;
+  h.dataset.glitch = getPref("glitch");
+  h.dataset.accent = getPref("accent");
+  h.dataset.size = getPref("size");
+  h.classList.toggle("reduce-motion", getPref("reduceMotion") === "1");
+}
+applyPrefs();
+
+// ---------- glitch engine ----------
+export const glitchLevel = () => (reduceMotion() ? "off" : (document.documentElement.dataset.glitch || "low"));
+
+// Make one element glitch for a moment
+export function glitchEl(el, dur = 420) {
+  if (!el || glitchLevel() === "off") return;
+  el.classList.remove("gx-run"); void el.offsetWidth; el.classList.add("gx-run");
+  setTimeout(() => el.classList.remove("gx-run"), dur);
+}
+
+// Whole-screen glitch: torn horizontal bars that shift and invert colors
+let screenEl = null;
+export function screenGlitch(power = 1) {
+  if (glitchLevel() === "off" || !screenEl) return;
+  screenEl.querySelectorAll("i").forEach(bar => {
+    bar.style.setProperty("--y", `${Math.random() * 100}%`);
+    bar.style.setProperty("--h", `${(2 + Math.random() * 9) * power}vh`);
+    bar.style.setProperty("--x", `${(Math.random() - .5) * 60 * power}px`);
+  });
+  screenEl.classList.remove("on"); void screenEl.offsetWidth; screenEl.classList.add("on");
+  setTimeout(() => screenEl.classList.remove("on"), 320);
+}
+
+const inView = el => { const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight && r.width > 0; };
+function setupGlitchEngine() {
+  screenEl = document.createElement("div");
+  screenEl.className = "screen-glitch";
+  screenEl.setAttribute("aria-hidden", "true");
+  screenEl.innerHTML = "<i></i><i></i><i></i><i></i><i></i><i></i>";
+  document.body.appendChild(screenEl);
+  const tick = () => {
+    const lvl = glitchLevel();
+    const wait = lvl === "high" ? 1800 + Math.random() * 3000 : 5000 + Math.random() * 7000;
+    setTimeout(() => {
+      if (lvl !== "off" && !document.hidden) {
+        const pool = [...document.querySelectorAll("h1, h2, .logo-mark, .eyebrow, .btn-red, .price, .wm, .stat strong")].filter(inView);
+        glitchEl(pool[(Math.random() * pool.length) | 0]);
+        if (lvl === "high" && Math.random() < .4) screenGlitch(.7);
+      }
+      tick();
+    }, wait);
+  };
+  tick();
+  setTimeout(() => screenGlitch(1), 150); // little "boot" glitch when a page opens
+}
 
 // Compress an image file → JPEG data URL (no paid storage needed)
 export async function imageToDataURL(file, maxSide = 1280, quality = 0.78, square = false) {
@@ -309,10 +379,15 @@ function mountHeader() {
         ${navLink("admin.html", "nav.admin", "admin", "admin-link")}
       </nav>
       <div class="header-actions">
-        <div class="lang-switch" role="group" data-i18n-aria="nav.language">
-          <span class="lang-knob" aria-hidden="true"></span>
-          <button type="button" data-lang="en">EN</button>
-          <button type="button" data-lang="es">ES</button>
+        <div class="lang-menu">
+          <button type="button" class="lang-btn" aria-haspopup="true" aria-expanded="false" data-i18n-aria="nav.language">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>
+            <span class="lang-cur"></span>
+            <svg class="chev" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="lang-list" role="menu">
+            ${LANGS.map(l => `<button type="button" role="menuitemradio" data-lang="${l}"><span class="lc">${l.toUpperCase()}</span><span class="ln" data-i18n="lang.${l}"></span><span class="tick" aria-hidden="true">●</span></button>`).join("")}
+          </div>
         </div>
         <div id="auth-slot" class="auth-slot"></div>
         <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav" data-i18n-aria="nav.menu">
@@ -325,7 +400,18 @@ function mountHeader() {
   </header>`;
 
   host.querySelector(".admin-link").hidden = true;
-  host.querySelectorAll("[data-lang]").forEach(b => b.addEventListener("click", () => setLang(b.dataset.lang)));
+  const langMenu = host.querySelector(".lang-menu");
+  const langBtn = langMenu.querySelector(".lang-btn");
+  const setLangOpen = open => { langMenu.classList.toggle("open", open); langBtn.setAttribute("aria-expanded", open ? "true" : "false"); };
+  langBtn.addEventListener("click", e => { e.stopPropagation(); setLangOpen(!langMenu.classList.contains("open")); });
+  host.querySelectorAll(".lang-list [data-lang]").forEach(b => b.addEventListener("click", () => {
+    setLangOpen(false);
+    if (b.dataset.lang !== getLang()) { screenGlitch(.8); setLang(b.dataset.lang); }
+  }));
+  document.addEventListener("click", e => { if (!langMenu.contains(e.target)) setLangOpen(false); });
+  const showLang = () => { langMenu.querySelector(".lang-cur").textContent = getLang().toUpperCase(); };
+  showLang();
+  window.addEventListener("langchange", showLang);
   const toggle = host.querySelector(".menu-toggle");
   toggle.addEventListener("click", () => {
     const open = document.body.classList.toggle("nav-open");
@@ -338,6 +424,7 @@ function mountHeader() {
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") {
       document.querySelector(".user-menu")?.classList.remove("open");
+      document.querySelector(".lang-menu")?.classList.remove("open");
       document.body.classList.remove("nav-open");
     }
   });
@@ -427,6 +514,9 @@ function renderAuthSlot() {
 function mountFooter() {
   const host = document.getElementById("site-footer");
   if (!host) return;
+  const letters = [...SITE.brand].map((ch, i) => ch === " "
+    ? `<span class="sp"> </span>`
+    : `<span class="ch" style="--i:${i}" data-c="${esc(ch)}"><span class="f">${esc(ch)}</span><span class="g" aria-hidden="true"></span></span>`).join("");
   host.innerHTML = `
   <footer class="site-footer">
     <div class="footer-tear" aria-hidden="true"></div>
@@ -449,11 +539,81 @@ function mountFooter() {
         <a href="settings.html" data-i18n="nav.settings"></a>
       </div>
     </div>
-    <div class="footer-wordmark" aria-hidden="true">${esc(SITE.brand)}</div>
-    <div class="container footer-bottom">
-      <span>© ${new Date().getFullYear()} ${esc(SITE.brand)}. <span data-i18n="footer.rights"></span></span>
+
+    <div class="wm-wrap" id="wm-wrap">
+      <div class="wm-glow" aria-hidden="true"></div>
+      <div class="wm" id="wm" data-text="${esc(SITE.brand)}" aria-label="${esc(SITE.brand)}">${letters}</div>
+      <div class="wm-scan" aria-hidden="true"></div>
+    </div>
+
+    <div class="container wm-terminal">
+      <span class="term-line"><span class="live-dot" aria-hidden="true"></span><span data-i18n="footer.status"></span><span class="cursor" aria-hidden="true">_</span></span>
+      <span class="term-meta">© ${new Date().getFullYear()} ${esc(SITE.brand)} · <span data-i18n="footer.rights"></span></span>
+      <button type="button" class="to-top" id="to-top"><span data-i18n="footer.top"></span> <span aria-hidden="true">↑</span></button>
     </div>
   </footer>`;
+  host.querySelector("#to-top").addEventListener("click", () => { screenGlitch(.5); window.scrollTo({ top: 0, behavior: reduceMotion() ? "auto" : "smooth" }); });
+  setupWordmark(host);
+}
+
+// The big brand name at the bottom: decodes when it appears, letters lift and glitch near the cursor
+const WM_GLYPHS = "!<>-_/[]{}=+*^?#%&$01░▒▓█";
+function setupWordmark(host) {
+  const wrap = host.querySelector("#wm-wrap");
+  const wm = host.querySelector("#wm");
+  const chars = [...wm.querySelectorAll(".ch")];
+
+  const decode = () => {
+    if (glitchLevel() === "off") { wm.classList.add("on"); return; }
+    wm.classList.add("on");
+    chars.forEach((c, i) => {
+      const g = c.querySelector(".g");
+      let n = 0;
+      const steps = 8 + i * 2;
+      c.classList.add("dec");
+      const run = () => {
+        n++;
+        if (n >= steps) { g.textContent = ""; c.classList.remove("dec"); return; }
+        g.textContent = WM_GLYPHS[(Math.random() * WM_GLYPHS.length) | 0];
+        setTimeout(run, 45);
+      };
+      setTimeout(run, i * 40);
+    });
+  };
+  if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { decode(); io.disconnect(); } }, { threshold: .35 });
+    io.observe(wm);
+  } else decode();
+
+  // random single-letter corruption
+  setInterval(() => {
+    if (glitchLevel() === "off" || document.hidden || !inView(wm)) return;
+    const c = chars[(Math.random() * chars.length) | 0];
+    if (!c) return;
+    if (c.classList.contains("dec")) return;
+    c.querySelector(".g").textContent = WM_GLYPHS[(Math.random() * WM_GLYPHS.length) | 0];
+    c.classList.add("bad");
+    setTimeout(() => { c.querySelector(".g").textContent = ""; c.classList.remove("bad"); }, 110 + Math.random() * 120);
+  }, glitchLevel() === "high" ? 700 : 1600);
+
+  // letters near the mouse rise and glow
+  if (window.matchMedia("(hover: none)").matches) return;
+  let centers = [], raf = 0, last = null;
+  const measure = () => { centers = chars.map(c => { const r = c.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }); };
+  const apply = () => {
+    raf = 0;
+    if (!last) return;
+    chars.forEach((c, i) => {
+      const [x, y] = centers[i] || [0, 0];
+      const d = Math.hypot(last.clientX - x, (last.clientY - y) * 1.4);
+      c.style.setProperty("--lift", Math.max(0, 1 - d / 220).toFixed(3));
+    });
+  };
+  wrap.addEventListener("pointerenter", measure);
+  wrap.addEventListener("pointermove", e => { last = e; if (!centers.length) measure(); if (!raf) raf = requestAnimationFrame(apply); });
+  wrap.addEventListener("pointerleave", () => { last = null; chars.forEach(c => c.style.setProperty("--lift", 0)); });
+  window.addEventListener("scroll", () => { centers = []; }, { passive: true });
+  window.addEventListener("resize", () => { centers = []; });
 }
 
 function showConfigBanner() {
@@ -591,7 +751,7 @@ function emit() {
 
 // ---------- start ----------
 function init() {
-  try { if (localStorage.getItem("site.reduceMotion") === "1") document.documentElement.classList.add("reduce-motion"); } catch {}
+  applyPrefs();
   mountHeader();
   mountFooter();
   if (!isConfigured) showConfigBanner();
@@ -601,6 +761,7 @@ function init() {
   setupReveal();
   setupPointerFX();
   setupPageTransitions();
+  setupGlitchEngine();
   requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add("loaded")));
 
   window.addEventListener("langchange", () => {
