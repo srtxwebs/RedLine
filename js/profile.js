@@ -1,4 +1,4 @@
-import { t, esc, db, fb, onUser, getUser, getProfile, setProfile, toast, avatarHTML, gateHTML, wireGate } from "./app.js";
+import { t, esc, db, fb, onUser, getUser, getProfile, setProfile, toast, avatarHTML, gateHTML, wireGate, withTimeout } from "./app.js";
 import { applyTranslations, fmtDay, fmtDate, fmtTime } from "./i18n.js";
 
 const $ = id => document.getElementById(id);
@@ -99,15 +99,15 @@ async function loadLists(uid) {
   $("p-bookings").innerHTML = `<div class="loading">${esc(t("common.loading"))}</div>`;
   $("p-requests").innerHTML = `<div class="loading">${esc(t("common.loading"))}</div>`;
   try {
-    const [bs, rs] = await Promise.all([
+    const [bs, rs] = await withTimeout(Promise.all([
       fb.getDocs(fb.query(fb.collection(db, "bookings"), fb.where("uid", "==", uid))),
       fb.getDocs(fb.query(fb.collection(db, "requests"), fb.where("uid", "==", uid)))
-    ]);
+    ]), 10000);
     bookings = bs.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
     requests = rs.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => ((b.createdAt && b.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0));
   } catch (e) {
     console.warn(e);
-    toast(t("common.error"), "error");
+    toast(t(e.code === "timeout" ? "common.dbSlow" : "common.error"), "error");
   }
   renderBookings();
   renderRequests();
@@ -163,7 +163,7 @@ $("profile-form").addEventListener("submit", async e => {
   };
   saving = true; renderSave();
   try {
-    await fb.updateDoc(fb.doc(db, "users", u.uid), patch);
+    await withTimeout(fb.setDoc(fb.doc(db, "users", u.uid), { uid: u.uid, email: u.email, ...patch }, { merge: true }), 10000);
     setProfile({ ...patch, updatedAt: new Date() });
     renderPreview();
     toast(t("profile.saved"));
