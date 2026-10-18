@@ -8,6 +8,7 @@ const DICT = {
   en: {
     "lang.en": "English",
     "lang.es": "Español",
+    "common.dbSlow": "Can't reach the database right now. Check your internet and try again.",
     "gate.email": "Sign in with email",
     "auth.close": "Close",
     "login.tabSignin": "Sign in",
@@ -223,7 +224,7 @@ const DICT = {
     "config.missing": "Firebase isn't configured yet. Open js/firebase-config.js and paste your project keys (see README.md).",
 
     "gate.title": "Sign in required",
-    "gate.sub": "Sign in with your Google account to see this page.",
+    "gate.sub": "Sign in or create an account to see this page.",
     "gate.btn": "Continue with Google",
 
     "book.eyebrow": "Booking",
@@ -421,6 +422,7 @@ const DICT = {
   es: {
     "lang.en": "English",
     "lang.es": "Español",
+    "common.dbSlow": "No se puede conectar con la base de datos. Revisa tu internet e inténtalo de nuevo.",
     "gate.email": "Entrar con correo",
     "auth.close": "Cerrar",
     "login.tabSignin": "Iniciar sesión",
@@ -636,7 +638,7 @@ const DICT = {
     "config.missing": "Firebase aún no está configurado. Abre js/firebase-config.js y pega las claves de tu proyecto (ver README.md).",
 
     "gate.title": "Necesitas iniciar sesión",
-    "gate.sub": "Inicia sesión con tu cuenta de Google para ver esta página.",
+    "gate.sub": "Inicia sesión o crea una cuenta para ver esta página.",
     "gate.btn": "Continuar con Google",
 
     "book.eyebrow": "Reservación",
