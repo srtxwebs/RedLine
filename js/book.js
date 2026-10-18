@@ -1,4 +1,4 @@
-import { SITE, t, esc, db, fb, isConfigured, onUser, getUser, getProfile, ensureSignedIn, toast, authErrorText } from "./app.js";
+import { SITE, t, esc, db, fb, isConfigured, onUser, getUser, getProfile, ensureSignedIn, toast, authErrorText, withTimeout } from "./app.js";
 import { applyTranslations, money, fmtDay, fmtTime, locale, getLang } from "./i18n.js";
 
 const MAX_DAYS_AHEAD = 90;
@@ -88,7 +88,7 @@ async function loadTaken() {
   renderSlots();
   if (isConfigured) {
     try {
-      const snap = await fb.getDocs(fb.query(fb.collection(db, "slots"), fb.where("date", "==", state.date)));
+      const snap = await withTimeout(fb.getDocs(fb.query(fb.collection(db, "slots"), fb.where("date", "==", state.date))), 7000);
       snap.forEach(d => {
         const time = d.id.split("_")[1];
         if (time) state.taken.add(`${time.slice(0, 2)}:${time.slice(2)}`);
@@ -167,7 +167,7 @@ async function confirm() {
   });
 
   try {
-    await batch.commit();
+    await withTimeout(batch.commit(), 15000);
     $("book-form").hidden = true;
     $("book-success").hidden = false;
     $("success-detail").innerHTML = `<strong>${esc(t(`pkg.${pkg.id}.name`))}</strong> · ${esc(fmtDay(state.date))} · ${esc(fmtTime(state.time))}`;
@@ -179,7 +179,7 @@ async function confirm() {
       state.time = null;
       await loadTaken();
     } else {
-      toast(t("common.error"), "error");
+      toast(t(e.code === "timeout" ? "common.dbSlow" : "common.error"), "error");
     }
   } finally {
     state.busy = false;
