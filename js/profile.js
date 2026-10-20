@@ -313,6 +313,21 @@ window.addEventListener("langchange", () => {
 
 /* ---------- start ---------- */
 let loadedFor = null;
+let touched = false;
+$("profile-form").addEventListener("input", () => { touched = true; });
+
+// Fresh profile from the database arrived (page started from the remembered one)
+window.addEventListener("profileupdate", e => {
+  const p = e.detail || {};
+  if (!getUser() || touched || saving) { renderHeader(); return; }
+  draft = { photo: p.photo || "", banner: BANNERS.includes(p.banner) ? p.banner : "red" };
+  $("p-name").value = p.displayName || getUser().displayName || "";
+  $("p-phone").value = p.phone || "";
+  $("p-company").value = p.company || "";
+  $("p-bio").value = p.bio || "";
+  $("p-bio-count").textContent = `${$("p-bio").value.length} / 500`;
+  renderHeader(); renderSave();
+});
 onUser((u, p) => {
   $("p-loading").hidden = true;
   if (!u) {
