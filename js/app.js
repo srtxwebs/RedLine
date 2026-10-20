@@ -10,6 +10,27 @@ let profile = null;
 let resolved = false;
 const subs = new Set();
 
+// Remember who is signed in on this device, so the top bar shows the account
+// instantly on every page instead of blinking while Firebase starts up.
+const SESS_KEY = "site.session.v1";
+const SESS_FIELDS = ["uid", "email", "displayName", "photo", "googlePhoto", "banner", "phone", "company", "bio", "lang", "createdAt"];
+function readSession() {
+  try { const s = JSON.parse(localStorage.getItem(SESS_KEY) || "null"); return s && s.uid ? s : null; } catch { return null; }
+}
+function saveSession() {
+  try {
+    if (!user) { localStorage.removeItem(SESS_KEY); return; }
+    const p = {};
+    SESS_FIELDS.forEach(k => { if (profile && profile[k] !== undefined) p[k] = profile[k]; });
+    if (p.createdAt && typeof p.createdAt === "object" && !("seconds" in p.createdAt)) p.createdAt = { seconds: Math.floor(new Date(p.createdAt).getTime() / 1000) || 0 };
+    p.uid = user.uid; p.email = user.email;
+    // a big uploaded photo may not fit: then keep everything else
+    try { localStorage.setItem(SESS_KEY, JSON.stringify(p)); }
+    catch { localStorage.setItem(SESS_KEY, JSON.stringify({ ...p, photo: "" })); }
+  } catch {}
+}
+let session = readSession();
+
 export const getUser = () => user;
 export const getProfile = () => profile;
 
@@ -17,7 +38,7 @@ export const adminLoginEmail = username => `${String(username).trim().toLowerCas
 // What someone types in the "Email" box → the account email
 export const loginIdToEmail = v => (String(v).includes("@") ? String(v).trim().toLowerCase() : adminLoginEmail(v));
 
-export function isAdmin(u = user) {
+export function isAdmin(u = user || (!resolved && session) || null) {
   if (!u || !u.email) return false;
   const email = u.email.toLowerCase();
   return SITE.adminUsers.map(adminLoginEmail).includes(email) || SITE.adminEmails.map(e => e.toLowerCase()).includes(email);
@@ -32,6 +53,7 @@ export function onUser(cb) {
 
 export function setProfile(patch) {
   profile = { ...(profile || {}), ...patch };
+  saveSession();
   renderAuthSlot();
 }
 
@@ -48,6 +70,7 @@ export async function ensureSignedIn() {
 }
 
 export async function doSignOut() {
+  try { localStorage.removeItem(SESS_KEY); } catch {}
   await signOutUser();
   location.href = "index.html";
 }
@@ -482,12 +505,25 @@ function renderAuthSlot() {
     document.querySelector(".site-header")?.dispatchEvent(new Event("navrefresh"));
   }
 
-  if (!resolved) { slot.innerHTML = `<span class="avatar avatar-skeleton"></span>`; return; }
+  // Before Firebase answers: show the remembered account (or the Sign in button)
+  const showUser = user || (!resolved && session ? session : null);
+  const showProfile = user ? profile : session;
+  if (!resolved && !session) {
+    if (slot.dataset.state === "out") return;
+    slot.dataset.state = "out";
+    slot.innerHTML = `<a class="btn btn-red btn-sm signin-btn" href="login.html"><span data-i18n="nav.signin"></span></a>`;
+    applyTranslations(slot);
+    return;
+  }
+  const key = showUser ? [showUser.uid, displayNameOf(showProfile, showUser), avatarSrc(showProfile, showUser), isAdmin(), getLang()].join("|") : "out|" + getLang();
+  if (slot.dataset.state === key) return; // nothing changed: don't redraw (no blink)
+  slot.dataset.state = key;
 
-  if (!user) {
+  if (!showUser) {
     slot.innerHTML = `<a class="btn btn-red btn-sm signin-btn" href="login.html"><span data-i18n="nav.signin"></span></a>`;
   } else {
-    const name = displayNameOf(profile, user);
+    const name = displayNameOf(showProfile, showUser);
+    const user = showUser, profile = showProfile;
     slot.innerHTML = `
       <div class="user-menu">
         <button type="button" class="user-btn" aria-haspopup="menu" data-i18n-aria="nav.account">
@@ -738,12 +774,13 @@ async function loadOrCreateProfile(u) {
     return p;
   } catch (e) {
     console.warn("Profile load failed (check firestore.rules):", e);
-    return { uid: u.uid, email: u.email, displayName: u.displayName || "", googlePhoto: u.photoURL || "", photo: "" };
+    return { uid: u.uid, email: u.email, displayName: u.displayName || "", googlePhoto: u.photoURL || "", photo: "", _failed: true };
   }
 }
 
 function emit() {
   resolved = true;
+  saveSession();
   renderAuthSlot();
   if (user) closeAuthModal(user);
   subs.forEach(cb => { try { cb(user, profile); } catch (e) { console.error(e); } });
@@ -779,8 +816,25 @@ function init() {
   setAuthLang(getLang());
   onAuthStateChanged(auth, async u => {
     user = u;
-    profile = u ? await loadOrCreateProfile(u) : null;
-    emit();
+    if (!u) { profile = null; session = null; emit(); return; }
+    const cached = session && session.uid === u.uid ? session : null;
+    if (cached) {
+      // Same person as last time: start the page right away with what we remember,
+      // then quietly refresh the profile from the database.
+      profile = { ...cached, googlePhoto: u.photoURL || cached.googlePhoto || "" };
+      emit();
+      loadOrCreateProfile(u).then(p => {
+        if (user !== u || p._failed) return;
+        profile = { ...profile, ...p };
+        saveSession();
+        renderAuthSlot();
+        window.dispatchEvent(new CustomEvent("profileupdate", { detail: profile }));
+      });
+    } else {
+      profile = await loadOrCreateProfile(u);
+      if (user !== u) return;
+      emit();
+    }
   });
 }
 
