@@ -1,4 +1,4 @@
-import { SITE, t, esc, toast, isConfigured, reduceMotion } from "./app.js";
+import { SITE, t, esc, toast, isConfigured, reduceMotion, onUser, isAdmin } from "./app.js";
 import { fetchPublicListings, cachedListings, cardHTML, wireCards, openListing, createdSec } from "./listings.js";
 
 const state = { list: [], cat: "", sort: "new", loaded: false };
@@ -63,6 +63,14 @@ async function load() {
     if (l) openListing(l); else toast(t("shop.notFound"), "error");
   }
 }
+
+// Owner sees Edit / Delete on each card once signed in
+let wasAdmin = false;
+onUser(() => { const a = isAdmin(); if (a !== wasAdmin) { wasAdmin = a; if (state.loaded) render(); } });
+$("grid").addEventListener("listingdeleted", e => {
+  state.list = state.list.filter(l => l.id !== e.detail);
+  setTimeout(render, 340);
+});
 
 render();
 load();
