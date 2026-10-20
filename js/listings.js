@@ -1,5 +1,5 @@
 // Ready-made website listings: shared by the home page, shop page and admin.
-import { SITE, t, esc, db, fb, isConfigured, reduceMotion } from "./app.js";
+import { SITE, t, esc, db, fb, isConfigured, reduceMotion, isAdmin, toast } from "./app.js";
 import { getLang, money, applyTranslations } from "./i18n.js";
 
 export const titleOf = l => (getLang() === "es" && l.titleEs) ? l.titleEs : (l.titleEn || l.titleEs || "");
@@ -7,22 +7,45 @@ export const descOf = l => (getLang() === "es" && l.descEs) ? l.descEs : (l.desc
 export const createdSec = l => (l.createdAt && l.createdAt.seconds) || 0;
 export const safeUrl = u => (/^https?:\/\//i.test(String(u || "").trim()) ? String(u).trim() : "");
 
-// Remember the last list for this visit so the page shows instantly next time
-const CACHE_KEY = "listings.cache.v1";
+// Remember the last list on this device so the page shows instantly next time
+const CACHE_KEY = "listings.cache.v2";
 export function cachedListings() {
-  try { const c = JSON.parse(sessionStorage.getItem(CACHE_KEY) || "null"); return Array.isArray(c) ? c : null; } catch { return null; }
+  try { const c = JSON.parse(localStorage.getItem(CACHE_KEY) || "null"); return Array.isArray(c) ? c : null; } catch { return null; }
 }
+export function invalidateListingsCache() {
+  try { localStorage.removeItem(CACHE_KEY); sessionStorage.removeItem("listings.cache.v1"); } catch {}
+}
+let inflight = null;
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error("timeout"), { code: "timeout" })), ms))]);
 
-export async function fetchPublicListings() {
-  if (!isConfigured) return [];
-  const snap = await withTimeout(fb.getDocs(fb.query(fb.collection(db, "listings"), fb.where("status", "in", ["available", "sold"]))), 8000);
+export function fetchPublicListings() {
+  if (!isConfigured) return Promise.resolve([]);
+  // one request at a time, shared by everyone who asks
+  if (!inflight) inflight = loadPublic().finally(() => { inflight = null; });
+  return inflight;
+}
+async function loadPublic() {
+  const snap = await withTimeout(fb.getDocs(fb.query(fb.collection(db, "listings"), fb.where("status", "in", ["available", "sold"]))), 12000);
   const list = snap.docs.map(d => {
     const x = d.data();
     return { id: d.id, ...x, createdAt: { seconds: (x.createdAt && x.createdAt.seconds) || 0 } };
   }).sort((a, b) => createdSec(b) - createdSec(a));
-  try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(list)); } catch {}
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(list)); }
+  catch { try { localStorage.setItem(CACHE_KEY, JSON.stringify(list.map(l => ({ ...l, thumb: "" })))); } catch {} }
   return list;
+}
+
+// Start downloading as soon as this file loads (before the page asks)
+if (isConfigured && ["home", "shop"].includes(document.body?.dataset.page)) {
+  fetchPublicListings().catch(() => {});
+}
+
+// Delete a listing and all its pictures (owner only)
+export async function deleteListing(id) {
+  const imgs = await withTimeout(fb.getDocs(fb.query(fb.collection(db, "listingImages"), fb.where("listingId", "==", id))), 15000);
+  await withTimeout(Promise.all(imgs.docs.map(d => fb.deleteDoc(fb.doc(db, "listingImages", d.id)))), 30000);
+  await withTimeout(fb.deleteDoc(fb.doc(db, "listings", id)), 15000);
+  invalidateListingsCache();
 }
 
 export async function fetchListingImages(listingId) {
@@ -52,6 +75,10 @@ export function cardHTML(l, i = 0) {
           <button type="button" class="btn btn-red btn-sm" data-open="${esc(l.id)}">${esc(t("shop.details"))}</button>
         </div>
       </div>
+      ${isAdmin() ? `<div class="owner-tools">
+        <a class="btn btn-ghost btn-sm" href="admin.html?edit=${encodeURIComponent(l.id)}">✎ ${esc(t("lst.edit"))}</a>
+        <button type="button" class="btn btn-danger btn-sm" data-del="${esc(l.id)}">${esc(t("lst.delete"))}</button>
+      </div>` : ""}
     </div>
   </article>`;
 }
@@ -182,5 +209,23 @@ export function wireCards(root, list) {
     const l = list.find(x => x.id === b.dataset.open);
     const img = b.closest(".listing-card")?.querySelector(".listing-thumb img");
     if (l) openListing(l, img);
+  }));
+  root.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", async () => {
+    if (!window.confirm(t("lst.deleteConfirm"))) return;
+    b.disabled = true;
+    try {
+      await deleteListing(b.dataset.del);
+      const card = b.closest(".listing-card");
+      card?.classList.add("removing");
+      setTimeout(() => card?.remove(), 320);
+      const i = list.findIndex(x => x.id === b.dataset.del);
+      if (i >= 0) list.splice(i, 1);
+      root.dispatchEvent(new CustomEvent("listingdeleted", { detail: b.dataset.del }));
+      toast(t("lst.deleted"));
+    } catch (err) {
+      console.warn(err);
+      b.disabled = false;
+      toast(err && err.code === "permission-denied" ? t("lst.errPerm") : `${t("common.error")} (${(err && err.code) || "?"})`, "error");
+    }
   }));
 }
