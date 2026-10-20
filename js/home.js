@@ -90,6 +90,7 @@ function drawFrame(now) {
   if (lvl === "off") { glitchUntil = 0; nextGlitch = now + 2000; }
   else if (now > nextGlitch) {
     glitchUntil = now + rand(90, 260);
+    if (Math.random() < 0.55) paperGlitch(rand(160, 280));
     nextGlitch = now + (lvl === "high" ? rand(700, 2200) : rand(1600, 4800));
   }
   if (now < glitchUntil) {
@@ -131,7 +132,6 @@ function stopRain() { running = false; cancelAnimationFrame(rafId); }
    2) TORN PAPER (SVG with a ripped hole showing the code)
    ========================================================= */
 const paper = document.getElementById("paper");
-const NS = "http://www.w3.org/2000/svg";
 
 // small seeded random so the tear keeps the same shape on resize
 function seeded(seed) {
@@ -141,7 +141,7 @@ function seeded(seed) {
 // Build a jagged torn outline around an ellipse
 function tearPoints(cx, cy, rx, ry, seed, prog = 1) {
   const r = seeded(seed);
-  const n = 150;
+  const n = 170;
   const ph = [r() * 6.28, r() * 6.28, r() * 6.28];
   const pts = [];
   for (let k = 0; k < n; k++) {
@@ -149,23 +149,28 @@ function tearPoints(cx, cy, rx, ry, seed, prog = 1) {
     let m = 1 + 0.16 * Math.sin(a * 2 + ph[0]) + 0.09 * Math.sin(a * 5 + ph[1]) + 0.05 * Math.sin(a * 9 + ph[2]);
     m += (r() - 0.5) * 0.07;                 // small jagged teeth
     if (r() < 0.06) m += r() * 0.09;         // occasional paper fibre spike
-    const p = prog;
-    pts.push([cx + Math.cos(a) * rx * m * p, cy + Math.sin(a) * ry * m * p]);
+    if (r() < 0.025) m -= r() * 0.08;        // little bite taken out
+    pts.push([cx + Math.cos(a) * rx * m * prog, cy + Math.sin(a) * ry * m * prog]);
   }
   return pts;
 }
 const toPath = pts => "M" + pts.map(p => p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" L") + " Z";
+// same outline pushed outwards a bit (the white torn layer under the dark paper)
+const grow = (pts, cx, cy, f, seed) => {
+  const r = seeded(seed);
+  return pts.map(([x, y]) => { const k = f + (r() - 0.5) * 0.035; return [cx + (x - cx) * k, cy + (y - cy) * k]; });
+};
 
 function holeSpecs() {
   const rect = paper.getBoundingClientRect();
   const w = rect.width, h = rect.height;
   if (w < 860) {
-    return { w, h, holes: [{ cx: w * 0.58, cy: h * 0.83, rx: w * 0.55, ry: h * 0.15, seed: 7, flap: true }] };
+    return { w, h, mobile: true, holes: [{ cx: w * 0.58, cy: h * 0.83, rx: w * 0.55, ry: h * 0.15, seed: 7, flap: true, main: true }] };
   }
   return {
-    w, h,
+    w, h, mobile: false,
     holes: [
-      { cx: w * 0.75, cy: h * 0.5, rx: w * 0.23, ry: h * 0.34, seed: 11, flap: true },
+      { cx: w * 0.75, cy: h * 0.5, rx: w * 0.23, ry: h * 0.34, seed: 11, flap: true, main: true },
       { cx: w * 0.97, cy: h * 0.93, rx: w * 0.06, ry: h * 0.07, seed: 23, flap: false }
     ]
   };
@@ -186,12 +191,70 @@ function flapPath(pts) {
   return toPath(seg.concat(mirrored));
 }
 
-let built = false, openProg = 0;
+// Cracks running out of the hole into the paper
+function cracks(s) {
+  const r = seeded(s.seed * 7 + 3);
+  const out = [];
+  const count = s.main ? 7 : 2;
+  for (let c = 0; c < count; c++) {
+    const i = Math.floor(r() * s.pts.length);
+    let [x, y] = s.pts[i];
+    let ang = Math.atan2(y - s.cy, x - s.cx) + (r() - 0.5) * 0.6;
+    const steps = 5 + Math.floor(r() * 7);
+    const seg = [[x, y]];
+    for (let k = 0; k < steps; k++) {
+      ang += (r() - 0.5) * 0.9;
+      const len = 6 + r() * 16;
+      x += Math.cos(ang) * len; y += Math.sin(ang) * len;
+      seg.push([x, y]);
+    }
+    out.push("M" + seg.map(p => p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" L"));
+  }
+  return out.join(" ");
+}
+
+// Tape strips holding the rip together
+function tapes(s, mobile) {
+  if (!s.main) return "";
+  const n = s.pts.length;
+  return (mobile ? [0.64, 0.88] : [0.07, 0.36, 0.83]).map((f, k) => {
+    const i = Math.floor(n * f);
+    const [x, y] = s.pts[i];
+    const [x2, y2] = s.pts[(i + 3) % n];
+    const ang = Math.atan2(y2 - y, x2 - x) * 180 / Math.PI + 90 + (k - 1) * 14;
+    const L = mobile ? 74 : 128, T = mobile ? 22 : 36;
+    const zig = side => Array.from({ length: 6 }, (_, j) => `${side * (L / 2 + (j % 2 ? 4 : 0))} ${-T / 2 + (T / 5) * j}`).join(" L");
+    return `<g class="tape" style="--td:${0.9 + k * 0.18}s" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${ang.toFixed(1)})">
+      <path d="M${zig(-1)} L${zig(1).split(" L").reverse().join(" L")} Z" fill="url(#tapeGrad)"/>
+      <path d="M${-L / 2} ${-T / 2 + 3} H${L / 2}" stroke="rgba(255,255,255,.18)" stroke-width="1"/>
+    </g>`;
+  }).join("");
+}
+
+// Little scraps of paper floating around the hole
+function shreds(s, w) {
+  if (!s.main) return "";
+  const r = seeded(99);
+  return Array.from({ length: 7 }, (_, k) => {
+    const i = Math.floor(r() * s.pts.length);
+    const [px, py] = s.pts[i];
+    const out = 0.9 + r() * 0.25;
+    const x = s.cx + (px - s.cx) * out, y = s.cy + (py - s.cy) * out;
+    const size = 3 + r() * 8;
+    const pts = Array.from({ length: 11 }, (_, j) => { const a = j / 11 * 6.28 + r() * 0.3; const m = size * (0.45 + r() * 0.7) * (j % 2 ? 1 : 0.8); return [Math.cos(a) * m * 1.5, Math.sin(a) * m]; });
+    return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><path class="shred" style="--sd:${(r() * 4).toFixed(2)}s;--sr:${(r() * 60 - 30).toFixed(0)}deg" d="${toPath(pts)}" fill="${k % 3 ? "#d9cebb" : "#2a2524"}" opacity=".9"/></g>`;
+  }).join("");
+}
+
+let built = false, openProg = 0, specCache = null;
 function buildPaper(prog = 1) {
-  const { w, h, holes } = holeSpecs();
+  const spec = holeSpecs();
+  specCache = spec;
+  const { w, h, holes, mobile } = spec;
   paper.setAttribute("viewBox", `0 0 ${w} ${h}`);
   const shapes = holes.map(hs => ({ ...hs, pts: tearPoints(hs.cx, hs.cy, hs.rx, hs.ry, hs.seed, prog) }));
   const holeD = shapes.map(s => toPath(s.pts)).join(" ");
+  const underD = shapes.map(s => toPath(grow(s.pts, s.cx, s.cy, 1.035, s.seed + 1))).join(" ");
 
   if (!built) {
     paper.innerHTML = `
@@ -205,43 +268,136 @@ function buildPaper(prog = 1) {
           <feTurbulence type="fractalNoise" baseFrequency=".09" numOctaves="3" seed="9" result="t"/>
           <feDisplacementMap in="SourceGraphic" in2="t" scale="9" xChannelSelector="R" yChannelSelector="G"/>
         </filter>
+        <filter id="fibers2" x="-10%" y="-10%" width="120%" height="120%">
+          <feTurbulence type="fractalNoise" baseFrequency=".5" numOctaves="2" seed="2" result="t"/>
+          <feDisplacementMap in="SourceGraphic" in2="t" scale="7" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
         <filter id="soft"><feGaussianBlur stdDeviation="14"/></filter>
+        <filter id="glowBlur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="22"/></filter>
         <radialGradient id="paperShade" cx="25%" cy="40%" r="90%">
           <stop offset="0" stop-color="#161414"/><stop offset=".6" stop-color="#0d0c0c"/><stop offset="1" stop-color="#060606"/>
         </radialGradient>
         <linearGradient id="flapGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#2b2725"/><stop offset=".55" stop-color="#191716"/><stop offset="1" stop-color="#0c0b0b"/>
+          <stop offset="0" stop-color="#3a3431"/><stop offset=".45" stop-color="#1d1a19"/><stop offset="1" stop-color="#0c0b0b"/>
+        </linearGradient>
+        <linearGradient id="tapeGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#efe6d4" stop-opacity=".34"/><stop offset=".5" stop-color="#d9cdb6" stop-opacity=".22"/><stop offset="1" stop-color="#efe6d4" stop-opacity=".3"/>
         </linearGradient>
         <mask id="tearMask" maskUnits="userSpaceOnUse">
           <rect id="mask-rect" fill="#fff"/>
           <path id="mask-hole" fill="#000"/>
         </mask>
+        <mask id="underMask" maskUnits="userSpaceOnUse">
+          <rect id="mask-rect2" fill="#fff"/>
+          <path id="mask-hole2" fill="#000"/>
+        </mask>
         <clipPath id="holeClip"><path id="clip-hole"/></clipPath>
+        <clipPath id="sl0"><rect id="sl0r" x="0"/></clipPath>
+        <clipPath id="sl1"><rect id="sl1r" x="0"/></clipPath>
+        <clipPath id="sl2"><rect id="sl2r" x="0"/></clipPath>
       </defs>
-      <g mask="url(#tearMask)">
-        <rect id="paper-base" fill="url(#paperShade)"/>
-        <rect id="paper-grain" fill="#fff" filter="url(#grain)"/>
-        <path id="paper-rim" fill="none" stroke="#e8e0d2" stroke-width="9" filter="url(#fibers)" opacity=".92"/>
+      <g id="pl">
+        <!-- white torn layer that shows around the edge -->
+        <g mask="url(#tearMask)">
+          <path id="paper-under" fill="#d8cdb9" filter="url(#fibers2)"/>
+        </g>
+        <g mask="url(#underMask)">
+          <rect id="paper-base" fill="url(#paperShade)"/>
+          <rect id="paper-grain" fill="#fff" filter="url(#grain)"/>
+          <path id="paper-cracks" fill="none" stroke="#000" stroke-width="1.6" stroke-linecap="round" opacity=".85"/>
+          <path id="paper-cracks-hi" fill="none" stroke="#e8e0d2" stroke-width=".8" stroke-linecap="round" opacity=".18" transform="translate(1.2 1.2)"/>
+        </g>
+        <g mask="url(#tearMask)" class="rims">
+          <path id="rim-c" class="rim-c" transform="translate(2 0)" fill="none" stroke="#19e6ff" stroke-width="3" opacity=".22"/>
+          <path id="rim-r" class="rim-r" transform="translate(-2 0)" fill="none" stroke="#ff1a0a" stroke-width="3" opacity=".5"/>
+          <path id="paper-rim" fill="none" stroke="#f1e9db" stroke-width="5" filter="url(#fibers)" opacity=".95"/>
+        </g>
+        <g clip-path="url(#holeClip)">
+          <path id="hole-shadow" fill="none" stroke="#000" stroke-width="56" filter="url(#soft)" opacity=".95"/>
+          <path id="hole-glow" class="hole-glow" fill="none" stroke="#ff2b1c" stroke-width="34" filter="url(#glowBlur)"/>
+        </g>
+        <g id="flaps"></g>
+        <g id="tapes"></g>
+        <g id="shreds"></g>
+        <g id="stamp" class="stamp" aria-hidden="true"></g>
       </g>
-      <g clip-path="url(#holeClip)">
-        <path id="hole-shadow" fill="none" stroke="#000" stroke-width="46" filter="url(#soft)" opacity=".9"/>
-      </g>
-      <g id="flaps"></g>`;
+      <g id="slices" class="slices">
+        <use href="#pl" clip-path="url(#sl0)" id="sl0u"/>
+        <use href="#pl" clip-path="url(#sl1)" id="sl1u"/>
+        <use href="#pl" clip-path="url(#sl2)" id="sl2u"/>
+      </g>`;
     built = true;
   }
-  ["mask-rect", "paper-base", "paper-grain"].forEach(id => {
-    const el = paper.querySelector("#" + id);
-    el.setAttribute("width", w); el.setAttribute("height", h);
-  });
-  ["mask-hole", "clip-hole", "paper-rim", "hole-shadow"].forEach(id => paper.querySelector("#" + id).setAttribute("d", holeD));
+  const q = id => paper.querySelector("#" + id);
+  ["mask-rect", "mask-rect2", "paper-base", "paper-grain"].forEach(id => { q(id).setAttribute("width", w); q(id).setAttribute("height", h); });
+  ["mask-hole", "clip-hole", "paper-rim", "hole-shadow", "hole-glow", "rim-r", "rim-c"].forEach(id => q(id).setAttribute("d", holeD));
+  q("paper-under").setAttribute("d", underD);
+  q("mask-hole2").setAttribute("d", underD);
+  ["sl0r", "sl1r", "sl2r"].forEach(id => q(id).setAttribute("width", w));
+
+  const done = prog > 0.98;
+  const crackD = done ? shapes.map(cracks).join(" ") : "";
+  q("paper-cracks").setAttribute("d", crackD);
+  q("paper-cracks-hi").setAttribute("d", crackD);
 
   // folded flaps (only once the tear is mostly open)
-  const flaps = paper.querySelector("#flaps");
-  flaps.innerHTML = prog > 0.6 ? shapes.filter(s => s.flap).map(s => {
+  q("flaps").innerHTML = prog > 0.6 ? shapes.filter(s => s.flap).map(s => {
     const d = flapPath(s.pts);
     return `<path d="${d}" fill="url(#flapGrad)" opacity="${Math.min(1, (prog - 0.6) * 2.5)}"/>
-            <path d="${d}" fill="none" stroke="#e8e0d2" stroke-width="3" filter="url(#fibers)" opacity=".7"/>`;
+            <path d="${d}" fill="url(#grain)" opacity=".5"/>
+            <path d="${d}" fill="none" stroke="#efe6d6" stroke-width="2.4" filter="url(#fibers)" opacity=".75"/>`;
   }).join("") : "";
+  q("tapes").innerHTML = done ? shapes.map(s => tapes(s, mobile)).join("") : "";
+  q("shreds").innerHTML = done ? shapes.map(s => shreds(s, w)).join("") : "";
+
+  // red "corrupted" stamp on the paper next to the rip
+  const stamp = q("stamp");
+  if (done && !mobile) {
+    const sx = w * 0.552, sy = h * 0.165;
+    stamp.setAttribute("transform", `translate(${sx.toFixed(1)} ${sy.toFixed(1)}) rotate(-8)`);
+    stamp.innerHTML = `
+      <rect x="-96" y="-27" width="192" height="54" rx="4" fill="none" stroke="currentColor" stroke-width="3"/>
+      <rect x="-89" y="-20" width="178" height="40" rx="2" fill="none" stroke="currentColor" stroke-width="1"/>
+      <text x="0" y="-1" text-anchor="middle" class="stamp-big">${esc(t("home.stamp"))}</text>
+      <text x="0" y="13" text-anchor="middle" class="stamp-small">0xDEAD · ${new Date().getFullYear()}</text>`;
+    stamp.style.display = "";
+  } else {
+    stamp.innerHTML = "";
+    stamp.style.display = "none";
+  }
+}
+
+// Glitch burst on the paper: chunks of the rip slide sideways, colour edges split
+let paperBusy = false;
+function paperGlitch(dur = 220) {
+  if (!built || paperBusy || reduceMotion() || glitchLevel() === "off" || !specCache) return;
+  paperBusy = true;
+  const { h } = specCache;
+  const big = glitchLevel() === "high" ? 1.6 : 1;
+  const slices = paper.querySelector("#slices");
+  const rr = paper.querySelector("#rim-r"), rc = paper.querySelector("#rim-c");
+  paper.classList.add("p-glitch");
+  let steps = 0;
+  const tick = () => {
+    ["sl0", "sl1", "sl2"].forEach(id => {
+      const r = paper.querySelector(`#${id}r`);
+      r.setAttribute("y", rand(0, h).toFixed(0));
+      r.setAttribute("height", rand(6, 46).toFixed(0));
+      paper.querySelector(`#${id}u`).setAttribute("transform", `translate(${(rand(-34, 34) * big).toFixed(1)} 0)`);
+    });
+    rr.setAttribute("transform", `translate(${(rand(-9, -3) * big).toFixed(1)} ${rand(-2, 2).toFixed(1)})`);
+    rc.setAttribute("transform", `translate(${(rand(3, 9) * big).toFixed(1)} ${rand(-2, 2).toFixed(1)})`);
+    slices.style.display = "block";
+    if (++steps < 3) setTimeout(tick, dur / 3);
+    else setTimeout(() => {
+      slices.style.display = "none";
+      rr.setAttribute("transform", "translate(-2 0)");
+      rc.setAttribute("transform", "translate(2 0)");
+      paper.classList.remove("p-glitch");
+      paperBusy = false;
+    }, dur / 3);
+  };
+  tick();
 }
 
 // rip-open animation
@@ -253,8 +409,9 @@ function ripOpen() {
     const p = Math.min(1, (now - start) / dur);
     // small jolts while tearing
     openProg = ease(p) * (1 + (p < 1 ? Math.sin(p * 40) * 0.015 : 0));
-    buildPaper(Math.max(0.001, openProg));
+    buildPaper(p >= 1 ? 1 : Math.max(0.001, Math.min(0.97, openProg)));
     if (p < 1) requestAnimationFrame(step);
+    else setTimeout(() => paperGlitch(260), 120);
   };
   setTimeout(() => requestAnimationFrame(step), 250);
 }
@@ -351,13 +508,33 @@ document.addEventListener("visibilitychange", () => (document.hidden ? stopRain(
 // Paper and text drift apart a little while scrolling (depth effect)
 const heroEl = document.getElementById("hero");
 const heroCopy = heroEl.querySelector(".hero-inner");
-let pRaf = 0;
+let pRaf = 0, scrollY0 = 0, mx = 0, my = 0, tmx = 0, tmy = 0, mRaf = 0;
+function applyDepth() {
+  paper.style.transform = `translate3d(${(mx * 10).toFixed(2)}px, ${(scrollY0 * 0.18 + my * 8).toFixed(2)}px, 0)`;
+  canvas.style.transform = `translate3d(${(-mx * 16).toFixed(2)}px, ${(-my * 12).toFixed(2)}px, 0) scale(1.04)`;
+}
+// Mouse moves the paper and the code behind it in opposite directions (depth)
+if (matchMedia("(pointer: fine)").matches) {
+  heroEl.addEventListener("pointermove", e => {
+    if (reduceMotion()) return;
+    const r = heroEl.getBoundingClientRect();
+    tmx = (e.clientX - r.left) / r.width - 0.5;
+    tmy = (e.clientY - r.top) / r.height - 0.5;
+    if (!mRaf) mRaf = requestAnimationFrame(function ease() {
+      mx += (tmx - mx) * 0.08; my += (tmy - my) * 0.08;
+      applyDepth();
+      mRaf = Math.abs(tmx - mx) + Math.abs(tmy - my) > 0.002 ? requestAnimationFrame(ease) : 0;
+    });
+  });
+  heroEl.addEventListener("pointerleave", () => { tmx = 0; tmy = 0; heroEl.dispatchEvent(new PointerEvent("pointermove", { clientX: heroEl.getBoundingClientRect().left + heroEl.clientWidth / 2, clientY: heroEl.getBoundingClientRect().top + heroEl.clientHeight / 2 })); });
+}
 window.addEventListener("scroll", () => {
   if (pRaf || reduceMotion()) return;
   pRaf = requestAnimationFrame(() => {
     pRaf = 0;
     const y = Math.min(window.scrollY, innerHeight);
-    paper.style.transform = `translate3d(0, ${y * 0.18}px, 0)`;
+    scrollY0 = y;
+    applyDepth();
     heroCopy.style.transform = `translate3d(0, ${y * 0.32}px, 0)`;
     heroCopy.style.opacity = String(Math.max(0, 1 - y / (innerHeight * 0.8)));
   });
@@ -370,7 +547,7 @@ window.addEventListener("resize", () => {
 });
 
 window.addEventListener("langchange", () => {
-  renderPackages(); renderMarquee(); syncGlitchText(); renderFeatured();
+  renderPackages(); renderMarquee(); syncGlitchText(); renderFeatured(); buildPaper(1);
 });
 
 /* =========================================================
@@ -493,3 +670,88 @@ syncMega();
 bentoLife();
 typeTerminal();
 window.addEventListener("langchange", () => { renderManifesto(); syncMega(); });
+
+/* =========================================================
+   8) BEFORE / AFTER slider with a glitchy seam
+   ========================================================= */
+(() => {
+  const ba = document.getElementById("ba");
+  const range = document.getElementById("ba-range");
+  if (!ba || !range) return;
+  const set = v => { ba.style.setProperty("--pos", v + "%"); range.value = v; };
+  let touched = false, raf = 0;
+  range.addEventListener("input", () => { touched = true; cancelAnimationFrame(raf); set(+range.value); ba.classList.add("dragging"); });
+  range.addEventListener("change", () => ba.classList.remove("dragging"));
+  range.addEventListener("pointerup", () => ba.classList.remove("dragging"));
+  // first time it shows up: sweep the seam across so people get it
+  new IntersectionObserver(([e], o) => {
+    if (!e.isIntersecting) return;
+    o.disconnect();
+    if (reduceMotion() || touched) return;
+    const start = performance.now(), dur = 2400;
+    const step = now => {
+      if (touched) return;
+      const p = Math.min(1, (now - start) / dur);
+      set((50 + Math.sin(p * Math.PI * 2) * 32 * (1 - p * 0.4)).toFixed(1));
+      if (p < 1) raf = requestAnimationFrame(step); else set(50);
+    };
+    raf = requestAnimationFrame(step);
+  }, { threshold: 0.5 }).observe(ba);
+  // random glitch on the seam
+  const seam = ba.querySelector(".ba-seam");
+  (function loop() {
+    if (!reduceMotion() && glitchLevel() !== "off") glitchEl(seam, 260);
+    setTimeout(loop, glitchLevel() === "high" ? rand(1400, 2600) : rand(2800, 5200));
+  })();
+})();
+
+/* =========================================================
+   9) DEVICES: a sample site that scrolls inside the screens
+   ========================================================= */
+function renderMocks() {
+  document.querySelectorAll("[data-mock]").forEach(m => {
+    m.innerHTML = `
+      <div class="ms-nav"><i class="ms-logo"></i><span></span><span></span><span></span><b>${esc(t("home.dev.mockBtn"))}</b></div>
+      <div class="ms-hero"><strong>${esc(t("home.dev.mockTitle"))}</strong><span class="ms-line"></span><span class="ms-line short"></span><b class="ms-btn">${esc(t("home.dev.mockBtn"))} →</b></div>
+      <div class="ms-strip"><i></i><i></i><i></i><i></i></div>
+      <div class="ms-cards">${[1, 2, 3, 4, 5, 6].map(i => `<div class="ms-card"><span class="ms-ph p${i % 3}"></span><span class="ms-line"></span><span class="ms-price">$${(i * 349 + 99).toLocaleString(locale())}</span></div>`).join("")}</div>
+      <div class="ms-band"><strong>${esc(t("home.ba.newTag"))}</strong><span class="ms-line"></span></div>
+      <div class="ms-cards">${[7, 8, 9].map(i => `<div class="ms-card"><span class="ms-ph p${i % 3}"></span><span class="ms-line"></span><span class="ms-price">$${(i * 349 + 99).toLocaleString(locale())}</span></div>`).join("")}</div>
+      <div class="ms-foot"><i></i><span class="ms-line short"></span></div>`;
+  });
+}
+// how far each sample page should scroll inside its screen
+function measureMocks() {
+  document.querySelectorAll("[data-mock]").forEach(m => m.style.setProperty("--dist", Math.max(0, m.offsetHeight - m.parentElement.clientHeight) + "px"));
+}
+renderMocks();
+requestAnimationFrame(measureMocks);
+document.fonts?.ready.then(measureMocks);
+window.addEventListener("resize", () => requestAnimationFrame(measureMocks));
+
+/* =========================================================
+   10) What every website includes
+   ========================================================= */
+const INC_ICONS = ["M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z", "M7 2h10v20H7zM11 18h2", "M4 4h16v16H4zM4 4l8 8 8-8",
+  "M3 21l1.6-4.8A8.5 8.5 0 1 1 7.8 19.4z", "M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5",
+  "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5-5", "M3 6h18v5H3zM3 13h18v5H3zM7 8.5h.01M7 15.5h.01", "M4 20V10M10 20V4M16 20v-7M22 20H2",
+  "M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.6 13.5l6.8 4M15.4 6.5l-6.8 4",
+  "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM2 12h20M12 2c3 3 3 17 0 20M12 2c-3 3-3 17 0 20"];
+function renderIncluded() {
+  const grid = document.getElementById("inc-grid");
+  if (!grid) return;
+  const wasIn = grid.dataset.rendered === "1";
+  grid.innerHTML = INC_ICONS.map((d, i) => `
+    <li class="inc reveal${wasIn ? " in" : ""}" style="--d:${(i % 5) * 70}ms">
+      <span class="inc-ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg></span>
+      <span class="inc-txt" data-text="${esc(t(`home.inc.${i + 1}`))}">${esc(t(`home.inc.${i + 1}`))}</span>
+      <span class="inc-ok" aria-hidden="true">✓</span>
+    </li>`).join("");
+  grid.dataset.rendered = "1";
+}
+renderIncluded();
+{
+  const g = document.getElementById("inc-grid");
+  g?.addEventListener("pointerover", e => { const li = e.target.closest(".inc"); if (li && !li.classList.contains("gx-run")) glitchEl(li, 220); });
+}
+window.addEventListener("langchange", () => { renderMocks(); measureMocks(); renderIncluded(); });
