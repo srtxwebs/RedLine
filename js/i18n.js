@@ -485,7 +485,17 @@ const DICT = {
     "home.inc.7": "Hosting setup",
     "home.inc.8": "Visitor stats",
     "home.inc.9": "Social media links",
-    "home.inc.10": "Domain help"
+    "home.inc.10": "Domain help",
+    "home.bk.est": "Artisan bakery · since 1998",
+    "home.bk.nav1": "Bread",
+    "home.bk.nav2": "Pastries",
+    "home.bk.nav3": "Visit us",
+    "home.bk.menu": "See the menu",
+    "home.bk.badge": "Baked fresh daily · since 1998 · ",
+    "home.bk.p1": "Butter croissant",
+    "home.bk.p2": "Sourdough loaf",
+    "home.bk.p3": "Pastry box",
+    "home.bk.p4": "Croissant dozen"
   },
 
   es: {
@@ -968,7 +978,17 @@ const DICT = {
     "home.inc.7": "Configuración de hosting",
     "home.inc.8": "Estadísticas de visitas",
     "home.inc.9": "Enlaces a redes sociales",
-    "home.inc.10": "Ayuda con tu dominio"
+    "home.inc.10": "Ayuda con tu dominio",
+    "home.bk.est": "Panadería artesanal · desde 1998",
+    "home.bk.nav1": "Pan",
+    "home.bk.nav2": "Repostería",
+    "home.bk.nav3": "Visítanos",
+    "home.bk.menu": "Ver el menú",
+    "home.bk.badge": "Horneado cada día · desde 1998 · ",
+    "home.bk.p1": "Cuernito de mantequilla",
+    "home.bk.p2": "Pan de masa madre",
+    "home.bk.p3": "Caja de pan dulce",
+    "home.bk.p4": "Docena de cuernitos"
   },
 
   de: {
@@ -1451,7 +1471,17 @@ const DICT = {
     "home.inc.7": "Hosting-Einrichtung",
     "home.inc.8": "Besucherstatistik",
     "home.inc.9": "Social-Media-Links",
-    "home.inc.10": "Hilfe mit der Domain"
+    "home.inc.10": "Hilfe mit der Domain",
+    "home.bk.est": "Handwerksbäckerei · seit 1998",
+    "home.bk.nav1": "Brot",
+    "home.bk.nav2": "Gebäck",
+    "home.bk.nav3": "Besuch uns",
+    "home.bk.menu": "Zur Speisekarte",
+    "home.bk.badge": "Täglich frisch · seit 1998 · ",
+    "home.bk.p1": "Buttercroissant",
+    "home.bk.p2": "Sauerteigbrot",
+    "home.bk.p3": "Gebäckbox",
+    "home.bk.p4": "Dutzend Croissants"
   },
 
   pt: {
@@ -1934,7 +1964,17 @@ const DICT = {
     "home.inc.7": "Configuração de hospedagem",
     "home.inc.8": "Estatísticas de visitas",
     "home.inc.9": "Links das redes sociais",
-    "home.inc.10": "Ajuda com o domínio"
+    "home.inc.10": "Ajuda com o domínio",
+    "home.bk.est": "Padaria artesanal · desde 1998",
+    "home.bk.nav1": "Pães",
+    "home.bk.nav2": "Doces",
+    "home.bk.nav3": "Visite-nos",
+    "home.bk.menu": "Ver o cardápio",
+    "home.bk.badge": "Assado todo dia · desde 1998 · ",
+    "home.bk.p1": "Croissant de manteiga",
+    "home.bk.p2": "Pão de fermentação natural",
+    "home.bk.p3": "Caixa de doces",
+    "home.bk.p4": "Dúzia de croissants"
   }
 };
 
