@@ -9,7 +9,7 @@
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
   <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js" crossorigin>
@@ -31,6 +31,7 @@
       <div class="container">
         <span class="eyebrow" data-i18n="admin.eyebrow"></span>
         <h1 data-i18n="admin.title"></h1>
+        <span class="ver-tag" aria-hidden="true">v8</span>
         <p class="muted" data-i18n="admin.sub"></p>
       </div>
     </section>
@@ -49,6 +50,7 @@
       </div>
 
       <div id="a-panel" hidden>
+        <div class="setup-warn" id="a-warn" hidden></div>
         <div class="admin-toolbar">
           <div class="tabs" role="tablist">
             <button type="button" class="tab active" role="tab" data-tab="listings"><span data-i18n="admin.listings"></span><span class="count" id="count-listings"></span></button>
@@ -138,5 +140,21 @@
   </main>
 
   <div id="site-footer"></div>
+  <!-- If this box shows up, js/admin.js on the website is an old copy: upload it again -->
+  <div class="setup-warn old-file" id="old-file-warn" hidden></div>
+  <script>
+    setTimeout(function () {
+      if (window.__ADMIN_V >= 8) return;
+      var l = "en"; try { l = (localStorage.getItem("site.lang") || navigator.language || "en").slice(0, 2); } catch (e) {}
+      var m = {
+        en: "<b>Old file detected.</b> The file js/admin.js on your website is an old version, so saving listings will fail. Upload the new js/admin.js to the js folder on GitHub (replace the old one), wait 1 minute and refresh with Ctrl+Shift+R.",
+        es: "<b>Archivo viejo detectado.</b> El archivo js/admin.js de tu sitio es una versión vieja, por eso no se pueden guardar los sitios. Sube el nuevo js/admin.js a la carpeta js en GitHub (reemplaza el viejo), espera 1 minuto y recarga con Ctrl+Shift+R.",
+        de: "<b>Alte Datei erkannt.</b> Die Datei js/admin.js auf deiner Website ist veraltet, deshalb schlägt das Speichern fehl. Lade die neue js/admin.js in den js-Ordner auf GitHub hoch (alte ersetzen), warte 1 Minute und lade mit Strg+Umschalt+R neu.",
+        pt: "<b>Arquivo antigo detectado.</b> O arquivo js/admin.js do seu site é uma versão antiga, por isso salvar falha. Envie o novo js/admin.js para a pasta js no GitHub (substitua o antigo), espere 1 minuto e recarregue com Ctrl+Shift+R."
+      };
+      var box = document.getElementById("old-file-warn");
+      box.innerHTML = m[l] || m.en; box.hidden = false;
+    }, 5000);
+  </script>
 </body>
 </html>
