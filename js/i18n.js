@@ -495,7 +495,9 @@ const DICT = {
     "home.bk.p1": "Butter croissant",
     "home.bk.p2": "Sourdough loaf",
     "home.bk.p3": "Pastry box",
-    "home.bk.p4": "Croissant dozen"
+    "home.bk.p4": "Croissant dozen",
+    "admin.setupTitle": "The database is blocking this account.",
+    "admin.setupBody": "Listings can't be saved until this is fixed. 1) Sign in with admin1100 and your password (not with Google). 2) In Firebase → Firestore Database → Rules, paste everything from firestore.rules and press Publish."
   },
 
   es: {
@@ -988,7 +990,9 @@ const DICT = {
     "home.bk.p1": "Cuernito de mantequilla",
     "home.bk.p2": "Pan de masa madre",
     "home.bk.p3": "Caja de pan dulce",
-    "home.bk.p4": "Docena de cuernitos"
+    "home.bk.p4": "Docena de cuernitos",
+    "admin.setupTitle": "La base de datos está bloqueando esta cuenta.",
+    "admin.setupBody": "No se pueden guardar sitios hasta arreglar esto. 1) Inicia sesión con admin1100 y tu contraseña (no con Google). 2) En Firebase → Firestore Database → Reglas, pega todo el contenido de firestore.rules y presiona Publicar."
   },
 
   de: {
@@ -1481,7 +1485,9 @@ const DICT = {
     "home.bk.p1": "Buttercroissant",
     "home.bk.p2": "Sauerteigbrot",
     "home.bk.p3": "Gebäckbox",
-    "home.bk.p4": "Dutzend Croissants"
+    "home.bk.p4": "Dutzend Croissants",
+    "admin.setupTitle": "Die Datenbank blockiert dieses Konto.",
+    "admin.setupBody": "Angebote können erst gespeichert werden, wenn das behoben ist. 1) Melde dich mit admin1100 und deinem Passwort an (nicht mit Google). 2) In Firebase → Firestore Database → Regeln den gesamten Inhalt von firestore.rules einfügen und auf Veröffentlichen klicken."
   },
 
   pt: {
@@ -1974,7 +1980,9 @@ const DICT = {
     "home.bk.p1": "Croissant de manteiga",
     "home.bk.p2": "Pão de fermentação natural",
     "home.bk.p3": "Caixa de doces",
-    "home.bk.p4": "Dúzia de croissants"
+    "home.bk.p4": "Dúzia de croissants",
+    "admin.setupTitle": "O banco de dados está bloqueando esta conta.",
+    "admin.setupBody": "Não dá para salvar sites até corrigir isto. 1) Entre com admin1100 e sua senha (não com o Google). 2) No Firebase → Firestore Database → Regras, cole todo o conteúdo de firestore.rules e clique em Publicar."
   }
 };
 
