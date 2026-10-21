@@ -129,7 +129,8 @@ function startRain() {
 function stopRain() { running = false; cancelAnimationFrame(rafId); }
 
 /* =========================================================
-   2) TORN PAPER (SVG with a ripped hole showing the code)
+   2) RIPPED POSTER: the paper is torn down the middle, the
+      right part falls away and the corrupted code shows behind.
    ========================================================= */
 const paper = document.getElementById("paper");
 
@@ -137,262 +138,229 @@ const paper = document.getElementById("paper");
 function seeded(seed) {
   return () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed); x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
 }
+const f1 = n => n.toFixed(1);
+const toPath = pts => "M" + pts.map(p => f1(p[0]) + " " + f1(p[1])).join(" L") + " Z";
+const toLine = pts => "M" + pts.map(p => f1(p[0]) + " " + f1(p[1])).join(" L");
 
-// Build a jagged torn outline around an ellipse
-function tearPoints(cx, cy, rx, ry, seed, prog = 1) {
+// A jagged torn line in "local" coordinates: v runs along the tear, u across it
+function tearLine(u0, u1, L, amp, seed, n = 120) {
   const r = seeded(seed);
-  const n = 170;
   const ph = [r() * 6.28, r() * 6.28, r() * 6.28];
   const pts = [];
-  for (let k = 0; k < n; k++) {
-    const a = (k / n) * Math.PI * 2;
-    let m = 1 + 0.16 * Math.sin(a * 2 + ph[0]) + 0.09 * Math.sin(a * 5 + ph[1]) + 0.05 * Math.sin(a * 9 + ph[2]);
-    m += (r() - 0.5) * 0.07;                 // small jagged teeth
-    if (r() < 0.06) m += r() * 0.09;         // occasional paper fibre spike
-    if (r() < 0.025) m -= r() * 0.08;        // little bite taken out
-    pts.push([cx + Math.cos(a) * rx * m * prog, cy + Math.sin(a) * ry * m * prog]);
+  for (let k = 0; k <= n; k++) {
+    const t = k / n, v = -12 + (L + 24) * t;
+    let u = u0 + (u1 - u0) * t
+      + amp * (Math.sin(t * 6.3 + ph[0]) * 0.55 + Math.sin(t * 17 + ph[1]) * 0.28 + Math.sin(t * 41 + ph[2]) * 0.12);
+    u += (r() - 0.5) * amp * 0.22;                  // small jagged teeth
+    if (r() < 0.07) u += (r() - 0.3) * amp * 0.7;   // fibre spikes / bites
+    pts.push([u, v]);
   }
   return pts;
 }
-const toPath = pts => "M" + pts.map(p => p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" L") + " Z";
-// same outline pushed outwards a bit (the white torn layer under the dark paper)
-const grow = (pts, cx, cy, f, seed) => {
-  const r = seeded(seed);
-  return pts.map(([x, y]) => { const k = f + (r() - 0.5) * 0.035; return [cx + (x - cx) * k, cy + (y - cy) * k]; });
-};
+// reflect a point across the line a→b
+function reflect([px, py], [ax, ay], [bx, by]) {
+  const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1;
+  const t = ((px - ax) * dx + (py - ay) * dy) / l2;
+  const fx = ax + t * dx, fy = ay + t * dy;
+  return [2 * fx - px, 2 * fy - py];
+}
 
-function holeSpecs() {
+let built = false, specCache = null, introDone = false;
+function buildPaper() {
   const rect = paper.getBoundingClientRect();
   const w = rect.width, h = rect.height;
-  if (w < 860) {
-    return { w, h, mobile: true, holes: [{ cx: w * 0.58, cy: h * 0.83, rx: w * 0.55, ry: h * 0.15, seed: 7, flap: true, main: true }] };
+  if (!w || !h) return;
+  const mobile = w < 860;
+  // local → screen. Desktop: tear runs top→bottom. Phone: tear runs left→right near the bottom.
+  const P = mobile ? ([u, v]) => [v, u] : ([u, v]) => [u, v];
+  const C = mobile ? h : w, L = mobile ? w : h;
+  specCache = { w, h, mobile };
+
+  const tearL = mobile
+    ? tearLine(h * 0.73, h * 0.79, L, h * 0.04, 5)
+    : tearLine(w * 0.635, w * 0.695, L, w * 0.03, 11);
+  const n = tearL.length - 1;
+
+  // folded corner at the top of the tear (desktop)
+  const kB = mobile ? 0 : Math.round(n * 0.27);
+  const A = mobile ? null : [tearL[0][0] - w * 0.1, -12];
+  const B = tearL[kB];
+  const edge = tearL.slice(kB);                                   // the visible torn edge
+  const keepLocal = mobile
+    ? [[-12, -12], ...tearL, [-12, L + 12]]
+    : [[-12, -12], A, ...edge, [-12, L + 12]];
+  const keep = keepLocal.map(P);
+
+  // white fibrous layer peeking out along the torn edge
+  const rr = seeded(77);
+  const under = [[-12, -12], ...(mobile ? [] : [A]), ...edge.map(([u, v]) => [u + 4 + rr() * 11, v]), [-12, L + 12]].map(P);
+
+  // the part that falls away when the page opens
+  const fall = [...tearL, [C + 12, L + 12], [C + 12, -12]].map(P);
+
+  // peeled flap
+  let flapD = "", flapShadowD = "", flapEdgeD = "";
+  if (!mobile) {
+    const region = tearL.slice(0, kB + 1);
+    const flap = [A, ...region.map(p => reflect(p, A, B))];
+    flapD = toPath(flap);
+    flapShadowD = toPath(flap.map(([x, y]) => [x - 6, y + 12]));
+    flapEdgeD = toLine(region.map(p => reflect(p, A, B)));
   }
-  return {
-    w, h, mobile: false,
-    holes: [
-      { cx: w * 0.75, cy: h * 0.5, rx: w * 0.23, ry: h * 0.34, seed: 11, flap: true, main: true },
-      { cx: w * 0.97, cy: h * 0.93, rx: w * 0.06, ry: h * 0.07, seed: 23, flap: false }
-    ]
-  };
-}
 
-// The "flap": a piece of paper folded back over the hole near its top-left
-function flapPath(pts) {
-  const n = pts.length;
-  const i0 = Math.floor(n * 0.58), i1 = Math.floor(n * 0.72);
-  const seg = pts.slice(i0, i1 + 1);
-  const [ax, ay] = seg[0], [bx, by] = seg[seg.length - 1];
-  const dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy || 1;
-  const mirrored = seg.slice().reverse().map(([px, py]) => {
-    const t = ((px - ax) * dx + (py - ay) * dy) / len2;
-    const fx = ax + t * dx, fy = ay + t * dy;
-    return [2 * fx - px, 2 * fy - py];
-  });
-  return toPath(seg.concat(mirrored));
-}
+  // torn strip still hanging on the right (desktop)
+  let stripD = "", stripUnderD = "", stripEdge = [];
+  if (!mobile) {
+    const s = tearLine(w * 0.885, w * 1.02, h * 0.62, w * 0.012, 31, 50).map(([u, v]) => [u + Math.pow(Math.max(0, v) / (h * 0.62), 2.2) * w * 0.12, v]);
+    stripEdge = s.filter(p => p[0] < w + 12);
+    stripD = toPath([[w + 12, -12], ...stripEdge.slice().reverse()]);
+    const r2 = seeded(9);
+    stripUnderD = toPath([[w + 12, -12], ...stripEdge.slice().reverse().map(([x, y]) => [x - 4 - r2() * 9, y])]);
+  }
 
-// Cracks running out of the hole into the paper
-function cracks(s) {
-  const r = seeded(s.seed * 7 + 3);
-  const out = [];
-  const count = s.main ? 7 : 2;
-  for (let c = 0; c < count; c++) {
-    const i = Math.floor(r() * s.pts.length);
-    let [x, y] = s.pts[i];
-    let ang = Math.atan2(y - s.cy, x - s.cx) + (r() - 0.5) * 0.6;
-    const steps = 5 + Math.floor(r() * 7);
-    const seg = [[x, y]];
-    for (let k = 0; k < steps; k++) {
-      ang += (r() - 0.5) * 0.9;
-      const len = 6 + r() * 16;
-      x += Math.cos(ang) * len; y += Math.sin(ang) * len;
-      seg.push([x, y]);
+  // cracks running from the edge into the paper
+  const rc = seeded(3);
+  const cracks = [];
+  for (let c = 0; c < (mobile ? 4 : 8); c++) {
+    let [u, v] = edge[Math.floor(rc() * edge.length)];
+    let ang = Math.PI + (rc() - 0.5) * 1.1;
+    const seg = [[u, v]];
+    for (let k = 0, steps = 4 + Math.floor(rc() * 7); k < steps; k++) {
+      ang += (rc() - 0.5) * 0.9;
+      const len = 6 + rc() * 15;
+      u += Math.cos(ang) * len; v += Math.sin(ang) * len;
+      seg.push([u, v]);
     }
-    out.push("M" + seg.map(p => p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" L"));
+    cracks.push(toLine(seg.map(P)));
   }
-  return out.join(" ");
-}
+  const crackD = cracks.join(" ");
 
-// Tape strips holding the rip together
-function tapes(s, mobile) {
-  if (!s.main) return "";
-  const n = s.pts.length;
-  return (mobile ? [0.64, 0.88] : [0.07, 0.36, 0.83]).map((f, k) => {
-    const i = Math.floor(n * f);
-    const [x, y] = s.pts[i];
-    const [x2, y2] = s.pts[(i + 3) % n];
-    const ang = Math.atan2(y2 - y, x2 - x) * 180 / Math.PI + 90 + (k - 1) * 14;
-    const L = mobile ? 74 : 128, T = mobile ? 22 : 36;
-    const zig = side => Array.from({ length: 6 }, (_, j) => `${side * (L / 2 + (j % 2 ? 4 : 0))} ${-T / 2 + (T / 5) * j}`).join(" L");
-    return `<g class="tape" style="--td:${0.9 + k * 0.18}s" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${ang.toFixed(1)})">
-      <path d="M${zig(-1)} L${zig(1).split(" L").reverse().join(" L")} Z" fill="url(#tapeGrad)"/>
-      <path d="M${-L / 2} ${-T / 2 + 3} H${L / 2}" stroke="rgba(255,255,255,.18)" stroke-width="1"/>
+  // tape: half on the paper, half hanging over the gap where it got ripped
+  const tapes = (mobile ? [0.72] : [0.5, 0.82]).map((f, k) => {
+    const i = Math.floor(edge.length * f);
+    const [x, y] = P(edge[i]);
+    const ang = (mobile ? 90 : 0) + (k ? -12 : 9);
+    const Lt = mobile ? 70 : 118, T = mobile ? 22 : 34;
+    return `<g class="tape" style="--td:${1.5 + k * 0.2}s" transform="translate(${f1(x)} ${f1(y)}) rotate(${ang})">
+      <path d="M${-Lt * 0.55} ${-T / 2} L${Lt * 0.18} ${-T / 2} L${Lt * 0.24} ${-T / 4} L${Lt * 0.16} 0 L${Lt * 0.26} ${T / 4} L${Lt * 0.2} ${T / 2} L${-Lt * 0.55} ${T / 2} L${-Lt * 0.5} ${T / 4} L${-Lt * 0.56} 0 L${-Lt * 0.5} ${-T / 4} Z" fill="url(#tapeGrad)"/>
+      <path d="M${Lt * 0.3} ${-T / 2} L${Lt * 0.62} ${-T / 2 + 4} L${Lt * 0.58} ${T / 2 - 2} L${Lt * 0.34} ${T / 2} L${Lt * 0.28} 0 Z" fill="url(#tapeGrad)" opacity=".75" transform="rotate(${k ? 14 : -10} ${Lt * 0.28} 0)"/>
     </g>`;
+  }).join("") + (mobile ? "" : `<g class="tape" style="--td:1.9s" transform="translate(${f1(w * 0.955)} ${f1(h * 0.035)}) rotate(6)"><rect x="-58" y="-17" width="116" height="34" fill="url(#tapeGrad)"/></g>`);
+
+  // little scraps of paper floating in the gap
+  const rs = seeded(99);
+  const shreds = Array.from({ length: mobile ? 5 : 9 }, (_, k) => {
+    const [eu, ev] = edge[Math.floor(rs() * edge.length)];
+    const [x, y] = P([eu + 14 + rs() * (mobile ? 40 : w * 0.16), ev]);
+    const size = 3 + rs() * 8;
+    const pts = Array.from({ length: 9 }, (_, j) => { const a = j / 9 * 6.28 + rs() * 0.4; const m = size * (0.45 + rs() * 0.7); return [Math.cos(a) * m * 1.4, Math.sin(a) * m]; });
+    return `<g transform="translate(${f1(x)} ${f1(y)})"><path class="shred" style="--sd:${(rs() * 4).toFixed(2)}s;--sr:${(rs() * 60 - 30).toFixed(0)}deg" d="${toPath(pts)}" fill="${k % 3 ? "#ded3c0" : "#2a2524"}" opacity=".9"/></g>`;
   }).join("");
-}
 
-// Little scraps of paper floating around the hole
-function shreds(s, w) {
-  if (!s.main) return "";
-  const r = seeded(99);
-  return Array.from({ length: 7 }, (_, k) => {
-    const i = Math.floor(r() * s.pts.length);
-    const [px, py] = s.pts[i];
-    const out = 0.9 + r() * 0.25;
-    const x = s.cx + (px - s.cx) * out, y = s.cy + (py - s.cy) * out;
-    const size = 3 + r() * 8;
-    const pts = Array.from({ length: 11 }, (_, j) => { const a = j / 11 * 6.28 + r() * 0.3; const m = size * (0.45 + r() * 0.7) * (j % 2 ? 1 : 0.8); return [Math.cos(a) * m * 1.5, Math.sin(a) * m]; });
-    return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><path class="shred" style="--sd:${(r() * 4).toFixed(2)}s;--sr:${(r() * 60 - 30).toFixed(0)}deg" d="${toPath(pts)}" fill="${k % 3 ? "#d9cebb" : "#2a2524"}" opacity=".9"/></g>`;
-  }).join("");
-}
-
-let built = false, openProg = 0, specCache = null;
-function buildPaper(prog = 1) {
-  const spec = holeSpecs();
-  specCache = spec;
-  const { w, h, holes, mobile } = spec;
-  paper.setAttribute("viewBox", `0 0 ${w} ${h}`);
-  const shapes = holes.map(hs => ({ ...hs, pts: tearPoints(hs.cx, hs.cy, hs.rx, hs.ry, hs.seed, prog) }));
-  const holeD = shapes.map(s => toPath(s.pts)).join(" ");
-  const underD = shapes.map(s => toPath(grow(s.pts, s.cx, s.cy, 1.035, s.seed + 1))).join(" ");
-
-  if (!built) {
-    paper.innerHTML = `
-      <defs>
-        <filter id="grain" x="0" y="0" width="100%" height="100%">
-          <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="4" result="n"/>
-          <feColorMatrix in="n" type="matrix" values="0 0 0 0 .09  0 0 0 0 .07  0 0 0 0 .07  0 0 0 .55 0"/>
-          <feComposite in2="SourceGraphic" operator="in"/>
-        </filter>
-        <filter id="fibers" x="-10%" y="-10%" width="120%" height="120%">
-          <feTurbulence type="fractalNoise" baseFrequency=".09" numOctaves="3" seed="9" result="t"/>
-          <feDisplacementMap in="SourceGraphic" in2="t" scale="9" xChannelSelector="R" yChannelSelector="G"/>
-        </filter>
-        <filter id="fibers2" x="-10%" y="-10%" width="120%" height="120%">
-          <feTurbulence type="fractalNoise" baseFrequency=".5" numOctaves="2" seed="2" result="t"/>
-          <feDisplacementMap in="SourceGraphic" in2="t" scale="7" xChannelSelector="R" yChannelSelector="G"/>
-        </filter>
-        <filter id="soft"><feGaussianBlur stdDeviation="14"/></filter>
-        <filter id="glowBlur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="22"/></filter>
-        <radialGradient id="paperShade" cx="25%" cy="40%" r="90%">
-          <stop offset="0" stop-color="#161414"/><stop offset=".6" stop-color="#0d0c0c"/><stop offset="1" stop-color="#060606"/>
-        </radialGradient>
-        <linearGradient id="flapGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#3a3431"/><stop offset=".45" stop-color="#1d1a19"/><stop offset="1" stop-color="#0c0b0b"/>
-        </linearGradient>
-        <linearGradient id="tapeGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#efe6d4" stop-opacity=".34"/><stop offset=".5" stop-color="#d9cdb6" stop-opacity=".22"/><stop offset="1" stop-color="#efe6d4" stop-opacity=".3"/>
-        </linearGradient>
-        <mask id="tearMask" maskUnits="userSpaceOnUse">
-          <rect id="mask-rect" fill="#fff"/>
-          <path id="mask-hole" fill="#000"/>
-        </mask>
-        <mask id="underMask" maskUnits="userSpaceOnUse">
-          <rect id="mask-rect2" fill="#fff"/>
-          <path id="mask-hole2" fill="#000"/>
-        </mask>
-        <clipPath id="holeClip"><path id="clip-hole"/></clipPath>
-        <clipPath id="sl0"><rect id="sl0r" x="0"/></clipPath>
-        <clipPath id="sl1"><rect id="sl1r" x="0"/></clipPath>
-        <clipPath id="sl2"><rect id="sl2r" x="0"/></clipPath>
-      </defs>
-      <g id="pl">
-        <!-- white torn layer that shows around the edge -->
-        <g mask="url(#tearMask)">
-          <path id="paper-under" fill="#d8cdb9" filter="url(#fibers2)"/>
-        </g>
-        <g mask="url(#underMask)">
-          <rect id="paper-base" fill="url(#paperShade)"/>
-          <rect id="paper-grain" fill="#fff" filter="url(#grain)"/>
-          <path id="paper-cracks" fill="none" stroke="#000" stroke-width="1.6" stroke-linecap="round" opacity=".85"/>
-          <path id="paper-cracks-hi" fill="none" stroke="#e8e0d2" stroke-width=".8" stroke-linecap="round" opacity=".18" transform="translate(1.2 1.2)"/>
-        </g>
-        <g mask="url(#tearMask)" class="rims">
-          <path id="rim-c" class="rim-c" transform="translate(2 0)" fill="none" stroke="#19e6ff" stroke-width="3" opacity=".22"/>
-          <path id="rim-r" class="rim-r" transform="translate(-2 0)" fill="none" stroke="#ff1a0a" stroke-width="3" opacity=".5"/>
-          <path id="paper-rim" fill="none" stroke="#f1e9db" stroke-width="5" filter="url(#fibers)" opacity=".95"/>
-        </g>
-        <g clip-path="url(#holeClip)">
-          <path id="hole-shadow" fill="none" stroke="#000" stroke-width="56" filter="url(#soft)" opacity=".95"/>
-          <path id="hole-glow" class="hole-glow" fill="none" stroke="#ff2b1c" stroke-width="34" filter="url(#glowBlur)"/>
-        </g>
-        <g id="flaps"></g>
-        <g id="tapes"></g>
-        <g id="shreds"></g>
-        <g id="stamp" class="stamp" aria-hidden="true"></g>
-      </g>
-      <g id="slices" class="slices">
-        <use href="#pl" clip-path="url(#sl0)" id="sl0u"/>
-        <use href="#pl" clip-path="url(#sl1)" id="sl1u"/>
-        <use href="#pl" clip-path="url(#sl2)" id="sl2u"/>
-      </g>`;
-    built = true;
-  }
-  const q = id => paper.querySelector("#" + id);
-  ["mask-rect", "mask-rect2", "paper-base", "paper-grain"].forEach(id => { q(id).setAttribute("width", w); q(id).setAttribute("height", h); });
-  ["mask-hole", "clip-hole", "paper-rim", "hole-shadow", "hole-glow", "rim-r", "rim-c"].forEach(id => q(id).setAttribute("d", holeD));
-  q("paper-under").setAttribute("d", underD);
-  q("mask-hole2").setAttribute("d", underD);
-  ["sl0r", "sl1r", "sl2r"].forEach(id => q(id).setAttribute("width", w));
-
-  const done = prog > 0.98;
-  const crackD = done ? shapes.map(cracks).join(" ") : "";
-  q("paper-cracks").setAttribute("d", crackD);
-  q("paper-cracks-hi").setAttribute("d", crackD);
-
-  // folded flaps (only once the tear is mostly open)
-  q("flaps").innerHTML = prog > 0.6 ? shapes.filter(s => s.flap).map(s => {
-    const d = flapPath(s.pts);
-    return `<path d="${d}" fill="url(#flapGrad)" opacity="${Math.min(1, (prog - 0.6) * 2.5)}"/>
-            <path d="${d}" fill="url(#grain)" opacity=".5"/>
-            <path d="${d}" fill="none" stroke="#efe6d6" stroke-width="2.4" filter="url(#fibers)" opacity=".75"/>`;
-  }).join("") : "";
-  q("tapes").innerHTML = done ? shapes.map(s => tapes(s, mobile)).join("") : "";
-  q("shreds").innerHTML = done ? shapes.map(s => shreds(s, w)).join("") : "";
-
-  // red "corrupted" stamp on the paper next to the rip
-  const stamp = q("stamp");
-  if (done && !mobile) {
-    const sx = w * 0.552, sy = h * 0.165;
-    stamp.setAttribute("transform", `translate(${sx.toFixed(1)} ${sy.toFixed(1)}) rotate(-8)`);
-    stamp.innerHTML = `
+  const edgeLine = toLine(edge.map(P));
+  const stripLine = stripEdge.length ? toLine(stripEdge) : "";
+  const stamp = mobile ? "" : `
+    <g class="stamp" transform="translate(${f1(w * 0.555)} ${f1(h * 0.8)}) rotate(-8)">
       <rect x="-96" y="-27" width="192" height="54" rx="4" fill="none" stroke="currentColor" stroke-width="3"/>
       <rect x="-89" y="-20" width="178" height="40" rx="2" fill="none" stroke="currentColor" stroke-width="1"/>
       <text x="0" y="-1" text-anchor="middle" class="stamp-big">${esc(t("home.stamp"))}</text>
-      <text x="0" y="13" text-anchor="middle" class="stamp-small">0xDEAD · ${new Date().getFullYear()}</text>`;
-    stamp.style.display = "";
-  } else {
-    stamp.innerHTML = "";
-    stamp.style.display = "none";
-  }
+      <text x="0" y="13" text-anchor="middle" class="stamp-small">0xDEAD · ${new Date().getFullYear()}</text>
+    </g>`;
+
+  paper.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  paper.innerHTML = `
+    <defs>
+      <filter id="grain" x="0" y="0" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="4" result="n"/>
+        <feColorMatrix in="n" type="matrix" values="0 0 0 0 .09  0 0 0 0 .07  0 0 0 0 .07  0 0 0 .55 0"/>
+        <feComposite in2="SourceGraphic" operator="in"/>
+      </filter>
+      <filter id="fibers" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="fractalNoise" baseFrequency=".5" numOctaves="2" seed="2" result="t"/>
+        <feDisplacementMap in="SourceGraphic" in2="t" scale="8" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+      <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="10"/></filter>
+      <filter id="glowBlur" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="26"/></filter>
+      <radialGradient id="paperShade" cx="25%" cy="40%" r="90%">
+        <stop offset="0" stop-color="#171515"/><stop offset=".6" stop-color="#0e0d0d"/><stop offset="1" stop-color="#070707"/>
+      </radialGradient>
+      <linearGradient id="flapGrad" gradientUnits="userSpaceOnUse" x1="${f1(A ? A[0] : 0)}" y1="${f1(A ? A[1] : 0)}" x2="${f1(A ? A[0] - w * 0.08 : 0)}" y2="${f1(B ? B[1] * 0.6 : 0)}">
+        <stop offset="0" stop-color="#8f877b"/><stop offset=".35" stop-color="#d9cfbe"/><stop offset=".8" stop-color="#b6ab99"/><stop offset="1" stop-color="#857c70"/>
+      </linearGradient>
+      <linearGradient id="tapeGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#efe6d4" stop-opacity=".42"/><stop offset=".5" stop-color="#d9cdb6" stop-opacity=".26"/><stop offset="1" stop-color="#efe6d4" stop-opacity=".36"/>
+      </linearGradient>
+      <clipPath id="keepClip"><path d="${toPath(keep)}"/></clipPath>
+      <clipPath id="sl0"><rect id="sl0r" x="0" width="${w}"/></clipPath>
+      <clipPath id="sl1"><rect id="sl1r" x="0" width="${w}"/></clipPath>
+      <clipPath id="sl2"><rect id="sl2r" x="0" width="${w}"/></clipPath>
+    </defs>
+    <g id="pl">
+      <!-- red light coming through the gap -->
+      <path class="gap-glow" d="${edgeLine}${stripLine ? " " + stripLine : ""}" fill="none" stroke="#ff2b1c" stroke-width="70" filter="url(#glowBlur)"/>
+      <!-- the piece that falls when the page opens -->
+      <g class="fall${introDone ? " gone" : ""}"><path d="${toPath(fall)}" fill="url(#paperShade)"/><path d="${toPath(fall)}" fill="#fff" filter="url(#grain)"/></g>
+      <!-- right strip -->
+      ${stripD ? `<g class="strip"><path d="${stripUnderD}" fill="#d8cdb9" filter="url(#fibers)"/><path d="${stripD}" fill="url(#paperShade)"/><path d="${stripD}" fill="#fff" filter="url(#grain)"/></g>` : ""}
+      <!-- main paper -->
+      <path d="${toPath(under)}" fill="#d8cdb9" filter="url(#fibers)"/>
+      <path d="${toPath(keep)}" fill="url(#paperShade)"/>
+      <g clip-path="url(#keepClip)">
+        <rect width="${w}" height="${h}" fill="#fff" filter="url(#grain)"/>
+        <path class="cracks" d="${crackD}" fill="none" stroke="#000" stroke-width="1.6" stroke-linecap="round" opacity=".85"/>
+        <path class="cracks" d="${crackD}" fill="none" stroke="#e8e0d2" stroke-width=".8" opacity=".16" transform="translate(1.2 1.2)"/>
+        <path d="${edgeLine}" fill="none" stroke="#000" stroke-width="40" filter="url(#soft)" opacity=".55" transform="translate(${mobile ? "0 -8" : "-10 0"})"/>
+      </g>
+      <g class="rims">
+        <path id="rim-c" class="rim-c" d="${edgeLine}${stripLine ? " " + stripLine : ""}" transform="translate(2 0)" fill="none" stroke="#19e6ff" stroke-width="2.5" opacity=".25"/>
+        <path id="rim-r" class="rim-r" d="${edgeLine}${stripLine ? " " + stripLine : ""}" transform="translate(-2 0)" fill="none" stroke="#ff1a0a" stroke-width="2.5" opacity=".5"/>
+      </g>
+      ${flapD ? `<g class="flap">
+        <path d="${flapShadowD}" fill="#000" opacity=".7" filter="url(#soft)"/>
+        <path d="${flapD}" fill="url(#flapGrad)"/>
+        <path d="${flapD}" fill="#fff" filter="url(#grain)" opacity=".7"/>
+        <path d="${flapEdgeD}" fill="none" stroke="#f3ece0" stroke-width="3" filter="url(#fibers)"/>
+        <path d="M${f1(A[0])} ${f1(A[1])} L${f1(B[0])} ${f1(B[1])}" stroke="#000" stroke-opacity=".5" stroke-width="2"/>
+      </g>` : ""}
+      <g class="tapes">${tapes}</g>
+      <g class="shreds">${shreds}</g>
+      ${stamp}
+    </g>
+    <g id="slices" class="slices">
+      <use href="#pl" clip-path="url(#sl0)" id="sl0u"/>
+      <use href="#pl" clip-path="url(#sl1)" id="sl1u"/>
+      <use href="#pl" clip-path="url(#sl2)" id="sl2u"/>
+    </g>`;
+  built = true;
 }
 
-// Glitch burst on the paper: chunks of the rip slide sideways, colour edges split
+// Glitch burst on the paper: chunks slide sideways, colour edges split
 let paperBusy = false;
 function paperGlitch(dur = 220) {
   if (!built || paperBusy || reduceMotion() || glitchLevel() === "off" || !specCache) return;
   paperBusy = true;
   const { h } = specCache;
   const big = glitchLevel() === "high" ? 1.6 : 1;
-  const slices = paper.querySelector("#slices");
-  const rr = paper.querySelector("#rim-r"), rc = paper.querySelector("#rim-c");
+  const q = s => paper.querySelector(s);
   paper.classList.add("p-glitch");
   let steps = 0;
   const tick = () => {
+    if (!q("#slices")) { paperBusy = false; return; }
     ["sl0", "sl1", "sl2"].forEach(id => {
-      const r = paper.querySelector(`#${id}r`);
-      r.setAttribute("y", rand(0, h).toFixed(0));
-      r.setAttribute("height", rand(6, 46).toFixed(0));
-      paper.querySelector(`#${id}u`).setAttribute("transform", `translate(${(rand(-34, 34) * big).toFixed(1)} 0)`);
+      q(`#${id}r`).setAttribute("y", rand(0, h).toFixed(0));
+      q(`#${id}r`).setAttribute("height", rand(6, 46).toFixed(0));
+      q(`#${id}u`).setAttribute("transform", `translate(${(rand(-34, 34) * big).toFixed(1)} 0)`);
     });
-    rr.setAttribute("transform", `translate(${(rand(-9, -3) * big).toFixed(1)} ${rand(-2, 2).toFixed(1)})`);
-    rc.setAttribute("transform", `translate(${(rand(3, 9) * big).toFixed(1)} ${rand(-2, 2).toFixed(1)})`);
-    slices.style.display = "block";
+    q("#rim-r").setAttribute("transform", `translate(${(rand(-10, -3) * big).toFixed(1)} ${rand(-2, 2).toFixed(1)})`);
+    q("#rim-c").setAttribute("transform", `translate(${(rand(3, 10) * big).toFixed(1)} ${rand(-2, 2).toFixed(1)})`);
+    q("#slices").style.display = "block";
     if (++steps < 3) setTimeout(tick, dur / 3);
     else setTimeout(() => {
-      slices.style.display = "none";
-      rr.setAttribute("transform", "translate(-2 0)");
-      rc.setAttribute("transform", "translate(2 0)");
+      if (q("#slices")) {
+        q("#slices").style.display = "none";
+        q("#rim-r").setAttribute("transform", "translate(-2 0)");
+        q("#rim-c").setAttribute("transform", "translate(2 0)");
+      }
       paper.classList.remove("p-glitch");
       paperBusy = false;
     }, dur / 3);
@@ -400,20 +368,14 @@ function paperGlitch(dur = 220) {
   tick();
 }
 
-// rip-open animation
+// Opening: the right part rips off and falls, then the corner peels
 function ripOpen() {
-  if (reduceMotion()) { buildPaper(1); return; }
-  const start = performance.now(), dur = 1100;
-  const ease = x => 1 - Math.pow(1 - x, 4);
-  const step = now => {
-    const p = Math.min(1, (now - start) / dur);
-    // small jolts while tearing
-    openProg = ease(p) * (1 + (p < 1 ? Math.sin(p * 40) * 0.015 : 0));
-    buildPaper(p >= 1 ? 1 : Math.max(0.001, Math.min(0.97, openProg)));
-    if (p < 1) requestAnimationFrame(step);
-    else setTimeout(() => paperGlitch(260), 120);
-  };
-  setTimeout(() => requestAnimationFrame(step), 250);
+  buildPaper();
+  if (reduceMotion()) { introDone = true; paper.classList.add("opened"); buildPaper(); return; }
+  setTimeout(() => {
+    paper.classList.add("ripping");
+    setTimeout(() => { introDone = true; paper.classList.add("opened"); paper.classList.remove("ripping"); paperGlitch(260); }, 1250);
+  }, 350);
 }
 
 /* =========================================================
@@ -492,7 +454,6 @@ function counters() {
    Start
    ========================================================= */
 resizeRain();
-buildPaper(0.001);
 ripOpen();
 renderPackages();
 renderMarquee();
@@ -543,11 +504,11 @@ window.addEventListener("scroll", () => {
 let rT;
 window.addEventListener("resize", () => {
   clearTimeout(rT);
-  rT = setTimeout(() => { resizeRain(); buildPaper(1); }, 150);
+  rT = setTimeout(() => { resizeRain(); buildPaper(); }, 150);
 });
 
 window.addEventListener("langchange", () => {
-  renderPackages(); renderMarquee(); syncGlitchText(); renderFeatured(); buildPaper(1);
+  renderPackages(); renderMarquee(); syncGlitchText(); renderFeatured(); buildPaper();
 });
 
 /* =========================================================
