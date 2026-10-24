@@ -1,6 +1,7 @@
 // Ready-made website listings: shared by the home page, shop page and admin.
 import { SITE, t, esc, db, fb, isConfigured, reduceMotion, isAdmin, toast } from "./app.js";
 import { getLang, money, applyTranslations } from "./i18n.js";
+import { rest } from "./firebase.js";
 
 export const titleOf = l => (getLang() === "es" && l.titleEs) ? l.titleEs : (l.titleEn || l.titleEs || "");
 export const descOf = l => (getLang() === "es" && l.descEs) ? l.descEs : (l.descEn || l.descEs || "");
@@ -25,11 +26,17 @@ export function fetchPublicListings() {
   return inflight;
 }
 async function loadPublic() {
-  const snap = await withTimeout(fb.getDocs(fb.query(fb.collection(db, "listings"), fb.where("status", "in", ["available", "sold"]))), 12000);
-  const list = snap.docs.map(d => {
-    const x = d.data();
-    return { id: d.id, ...x, createdAt: { seconds: (x.createdAt && x.createdAt.seconds) || 0 } };
-  }).sort((a, b) => createdSec(b) - createdSec(a));
+  let rows;
+  try {
+    // one plain request: much faster than starting the live database connection
+    rows = await rest.query("listings", "status", "IN", ["available", "sold"], 10000);
+  } catch (e) {
+    if (e.code !== "network" && e.code !== "timeout") throw e;
+    const snap = await withTimeout(fb.getDocs(fb.query(fb.collection(db, "listings"), fb.where("status", "in", ["available", "sold"]))), 12000);
+    rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+  const list = rows.map(x => ({ ...x, createdAt: { seconds: (x.createdAt && x.createdAt.seconds) || 0 } }))
+    .sort((a, b) => createdSec(b) - createdSec(a));
   try { localStorage.setItem(CACHE_KEY, JSON.stringify(list)); }
   catch { try { localStorage.setItem(CACHE_KEY, JSON.stringify(list.map(l => ({ ...l, thumb: "" })))); } catch {} }
   return list;
@@ -42,15 +49,20 @@ if (isConfigured && ["home", "shop"].includes(document.body?.dataset.page)) {
 
 // Delete a listing and all its pictures (owner only)
 export async function deleteListing(id) {
-  const imgs = await withTimeout(fb.getDocs(fb.query(fb.collection(db, "listingImages"), fb.where("listingId", "==", id))), 15000);
-  await withTimeout(Promise.all(imgs.docs.map(d => fb.deleteDoc(fb.doc(db, "listingImages", d.id)))), 30000);
-  await withTimeout(fb.deleteDoc(fb.doc(db, "listings", id)), 15000);
+  const imgs = await rest.query("listingImages", "listingId", "EQUAL", id, 15000);
+  await Promise.all(imgs.map(d => rest.del(`listingImages/${d.id}`)));
+  await rest.del(`listings/${id}`);
   invalidateListingsCache();
 }
 
 export async function fetchListingImages(listingId) {
-  const snap = await fb.getDocs(fb.query(fb.collection(db, "listingImages"), fb.where("listingId", "==", listingId)));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order || 0) - (b.order || 0));
+  let rows;
+  try { rows = await rest.query("listingImages", "listingId", "EQUAL", listingId, 15000); }
+  catch (e) {
+    const snap = await fb.getDocs(fb.query(fb.collection(db, "listingImages"), fb.where("listingId", "==", listingId)));
+    rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+  return rows.sort((a, b) => (a.order || 0) - (b.order || 0));
 }
 
 const statusText = s => t(`shop.${s === "hidden" ? "hidden" : s}`);
@@ -225,7 +237,7 @@ export function wireCards(root, list) {
     } catch (err) {
       console.warn(err);
       b.disabled = false;
-      toast(err && err.code === "permission-denied" ? t("lst.errPerm") : `${t("common.error")} (${(err && err.code) || "?"})`, "error");
+      toast(err && err.code === "permission-denied" ? t("lst.errPerm") : (err && (err.code === "network" || err.code === "timeout")) ? t("lst.errNet") : `${t("common.error")} (${(err && err.code) || "?"})`, "error");
     }
   }));
 }
