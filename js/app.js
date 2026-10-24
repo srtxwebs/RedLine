@@ -787,35 +787,6 @@ function emit() {
   subs.forEach(cb => { try { cb(user, profile); } catch (e) { console.error(e); } });
 }
 
-// ---------- cursor ring (desktop only) ----------
-function setupCursor() {
-  if (!matchMedia("(hover: hover) and (pointer: fine)").matches || reduceMotion()) return;
-  const ring = document.createElement("div");
-  ring.className = "cursor-ring";
-  ring.setAttribute("aria-hidden", "true");
-  document.body.appendChild(ring);
-  let x = -100, y = -100, rx = x, ry = y, raf = 0;
-  const loop = () => {
-    rx += (x - rx) * 0.22; ry += (y - ry) * 0.22;
-    ring.style.transform = `translate3d(${rx.toFixed(1)}px, ${ry.toFixed(1)}px, 0)`;
-    raf = Math.abs(x - rx) + Math.abs(y - ry) > 0.3 ? requestAnimationFrame(loop) : 0;
-  };
-  addEventListener("pointermove", e => {
-    if (e.pointerType !== "mouse") return;
-    x = e.clientX; y = e.clientY;
-    ring.classList.add("on");
-    if (!raf) raf = requestAnimationFrame(loop);
-    const hot = e.target.closest?.("a, button, [role=button], label, select, summary, .listing-thumb, .ba-range");
-    ring.classList.toggle("hover", !!hot && !e.target.closest("input:not([type=range]), textarea"));
-  }, { passive: true });
-  document.addEventListener("mouseleave", () => ring.classList.remove("on"));
-  addEventListener("pointerdown", () => {
-    ring.classList.add("down");
-    if (glitchLevel() !== "off") { ring.classList.remove("gx"); void ring.offsetWidth; ring.classList.add("gx"); }
-  });
-  addEventListener("pointerup", () => ring.classList.remove("down"));
-}
-
 // ---------- start ----------
 function init() {
   applyPrefs();
@@ -829,7 +800,6 @@ function init() {
   setupPointerFX();
   setupPageTransitions();
   setupGlitchEngine();
-  setupCursor();
   requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add("loaded")));
 
   window.addEventListener("langchange", () => {
