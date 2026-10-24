@@ -31,7 +31,7 @@
       <div class="container">
         <span class="eyebrow" data-i18n="admin.eyebrow"></span>
         <h1 data-i18n="admin.title"></h1>
-        <span class="ver-tag" aria-hidden="true">v8</span>
+        <span class="ver-tag" aria-hidden="true">v9</span>
         <p class="muted" data-i18n="admin.sub"></p>
       </div>
     </section>
@@ -144,7 +144,7 @@
   <div class="setup-warn old-file" id="old-file-warn" hidden></div>
   <script>
     setTimeout(function () {
-      if (window.__ADMIN_V >= 8) return;
+      if (window.__ADMIN_V >= 9) return;
       var l = "en"; try { l = (localStorage.getItem("site.lang") || navigator.language || "en").slice(0, 2); } catch (e) {}
       var m = {
         en: "<b>A file is missing.</b> js/owner.js is not on your website yet, so this page can't save listings. Upload owner.js into the js folder on GitHub, wait 1 minute and refresh with Ctrl+Shift+R.",
