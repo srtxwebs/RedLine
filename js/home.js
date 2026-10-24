@@ -165,11 +165,20 @@ function reflect([px, py], [ax, ay], [bx, by]) {
   return [2 * fx - px, 2 * fy - py];
 }
 
-let built = false, specCache = null, introDone = false;
+let built = false, specCache = null, introDone = false, builtSize = "";
+// redraw the paper whenever the hero changes size (fonts loading, rotating the phone…)
+if ("ResizeObserver" in window) {
+  let roT;
+  new ResizeObserver(() => {
+    const r = paper.getBoundingClientRect();
+    if (Math.round(r.width) + "x" + Math.round(r.height) === builtSize) return;
+    clearTimeout(roT); roT = setTimeout(() => buildPaper(), 60);
+  }).observe(paper);
+}
 function buildPaper() {
   const rect = paper.getBoundingClientRect();
-  const w = rect.width, h = rect.height;
-  if (!w || !h) return;
+  const w = Math.round(rect.width), h = Math.round(rect.height);
+  if (!w || !h) { requestAnimationFrame(() => buildPaper()); return; }
   const mobile = w < 860;
   // local → screen. Desktop: tear runs top→bottom. Phone: tear runs left→right near the bottom.
   const P = mobile ? ([u, v]) => [v, u] : ([u, v]) => [u, v];
@@ -268,6 +277,7 @@ function buildPaper() {
     </g>`;
 
   paper.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  paper.setAttribute("preserveAspectRatio", "xMidYMid slice"); // always cover the whole hero
   paper.innerHTML = `
     <defs>
       <filter id="grain" x="0" y="0" width="100%" height="100%">
@@ -332,6 +342,8 @@ function buildPaper() {
       <use href="#pl" clip-path="url(#sl2)" id="sl2u"/>
     </g>`;
   built = true;
+  builtSize = w + "x" + h;
+  document.getElementById("hero")?.classList.add("paper-ready");
 }
 
 // Glitch burst on the paper: chunks slide sideways, colour edges split
@@ -471,7 +483,8 @@ const heroEl = document.getElementById("hero");
 const heroCopy = heroEl.querySelector(".hero-inner");
 let pRaf = 0, scrollY0 = 0, mx = 0, my = 0, tmx = 0, tmy = 0, mRaf = 0;
 function applyDepth() {
-  paper.style.transform = `translate3d(${(mx * 10).toFixed(2)}px, ${(scrollY0 * 0.18 + my * 8).toFixed(2)}px, 0)`;
+  // the paper is a bit bigger than the hero, so these small moves never uncover the code at the edges
+  paper.style.transform = `translate3d(${(mx * 10).toFixed(2)}px, ${(my * 8).toFixed(2)}px, 0)`;
   canvas.style.transform = `translate3d(${(-mx * 16).toFixed(2)}px, ${(-my * 12).toFixed(2)}px, 0) scale(1.04)`;
 }
 // Mouse moves the paper and the code behind it in opposite directions (depth)
