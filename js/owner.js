@@ -1,9 +1,10 @@
 import { SITE, t, esc, db, fb, onUser, isAdmin, toast, imageToDataURL, withTimeout } from "./app.js";
 import { applyTranslations, money, fmtDay, fmtDate, fmtTime } from "./i18n.js";
+import { rest } from "./firebase.js";
 import { titleOf, createdSec, fetchListingImages, safeUrl, deleteListing, invalidateListingsCache } from "./listings.js";
 
 const $ = id => document.getElementById(id);
-window.__ADMIN_V = 8; // tells admin.html this file is up to date
+window.__ADMIN_V = 9; // tells admin.html this file is up to date
 const STATUSES = {
   listings: ["available", "sold", "hidden"],
   bookings: ["pending", "confirmed", "completed", "cancelled"],
@@ -144,10 +145,17 @@ async function load() {
   $("a-list").innerHTML = `<div class="loading">${esc(t("common.loading"))}</div>`;
   const get = async (col, ordered) => {
     try {
-      const q = ordered ? fb.query(fb.collection(db, col), fb.orderBy("createdAt", "desc")) : fb.collection(db, col);
-      const snap = await withTimeout(fb.getDocs(q), 12000);
-      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch (e) { console.warn(col, e); toast(saveErrorText(e), "error"); return []; }
+      // direct request first (fast, clear errors)
+      const rows = await rest.query(col, null, null, null, 15000);
+      return rows.sort((a, b) => createdSec(b) - createdSec(a));
+    } catch (e) {
+      console.warn(col, "direct request failed, trying the normal way", e);
+      try {
+        const q = ordered ? fb.query(fb.collection(db, col), fb.orderBy("createdAt", "desc")) : fb.collection(db, col);
+        const snap = await withTimeout(fb.getDocs(q), 12000);
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch (e2) { console.warn(col, e2); toast(saveErrorText(e.code === "network" ? e2 : e), "error"); return []; }
+    }
   };
   checkSetup();
   const [listings, bookings, requests] = await Promise.all([get("listings", false), get("bookings", true), get("requests", true)]);
@@ -161,10 +169,19 @@ async function checkSetup() {
   if (!box) return;
   try {
     // only the owner may read hidden listings, so this fails if the rules or the account are wrong
-    await withTimeout(fb.getDocs(fb.query(fb.collection(db, "listings"), fb.where("status", "==", "hidden"))), 12000);
+    await rest.query("listings", "status", "EQUAL", "hidden", 15000);
     box.hidden = true;
   } catch (e) {
-    if (e && e.code === "timeout") return;
+    if (e && (e.code === "timeout" || e.code === "network")) {
+      box.innerHTML = `<strong>${esc(t("lst.errNetTitle"))}</strong><span>${esc(t("lst.errNet"))}</span><code>${esc(e.code)}</code>`;
+      box.hidden = false;
+      return;
+    }
+    if (e && e.code === "not-found") {
+      box.innerHTML = `<strong>${esc(t("admin.setupTitle"))}</strong><span>${esc(t("lst.errNoDb"))}</span><code>not-found</code>`;
+      box.hidden = false;
+      return;
+    }
     box.innerHTML = `<strong>${esc(t("admin.setupTitle"))}</strong><span>${esc(t("admin.setupBody"))}</span><code>${esc((e && e.code) || "error")}</code>`;
     box.hidden = false;
   }
@@ -175,11 +192,9 @@ async function updateStatus(id, status) {
   const item = state.data[col].find(i => i.id === id);
   if (!item) return;
   try {
-    const batch = fb.writeBatch(db);
-    batch.update(fb.doc(db, col, id), { status, updatedAt: fb.serverTimestamp() });
+    await rest.set(`${col}/${id}`, { status, updatedAt: new Date() }, true);
     // Cancelling a booking frees its time so someone else can book it
-    if (col === "bookings" && status === "cancelled" && item.slotId) batch.delete(fb.doc(db, "slots", item.slotId));
-    await batch.commit();
+    if (col === "bookings" && status === "cancelled" && item.slotId) await rest.del(`slots/${item.slotId}`).catch(e => console.warn(e));
     item.status = status;
     render();
     toast(t("admin.updated"));
@@ -195,16 +210,14 @@ async function removeItem(id) {
   const col = state.tab;
   const item = state.data[col].find(i => i.id === id);
   try {
-    const batch = fb.writeBatch(db);
-    batch.delete(fb.doc(db, col, id));
-    if (col === "bookings" && item && item.slotId && item.status !== "cancelled") batch.delete(fb.doc(db, "slots", item.slotId));
-    await batch.commit();
+    await rest.del(`${col}/${id}`);
+    if (col === "bookings" && item && item.slotId && item.status !== "cancelled") await rest.del(`slots/${item.slotId}`).catch(e => console.warn(e));
     state.data[col] = state.data[col].filter(i => i.id !== id);
     render();
     toast(t("admin.deleted"));
   } catch (e) {
     console.warn(e);
-    toast(t("common.error"), "error");
+    toast(saveErrorText(e), "error");
   }
 }
 
@@ -315,7 +328,9 @@ function saveErrorText(err) {
   const code = (err && err.code) || "";
   const msg = String((err && err.message) || "");
   if (code === "permission-denied" || /permission/i.test(msg)) return t("lst.errPerm");
-  if (code === "timeout") return t("common.dbSlow");
+  if (code === "timeout" || code === "network") return t("lst.errNet");
+  if (code === "not-found") return t("lst.errNoDb");
+  if (code === "unauthenticated") return t("lst.errPerm");
   if (code === "invalid-argument" || /exceeds|too large|maximum/i.test(msg)) return t("lst.errBig");
   return `${t("common.error")} (${code || msg.slice(0, 60) || "?"})`;
 }
@@ -333,9 +348,9 @@ $("ed-form").addEventListener("submit", async e => {
   ed.busy = true; renderEdSave();
   try {
     const isNew = !ed.id;
-    const ref = isNew ? fb.doc(fb.collection(db, "listings")) : fb.doc(db, "listings", ed.id);
+    const ref = { id: isNew ? rest.newId() : ed.id };
     // give every new picture its own id first
-    ed.images.forEach(im => { if (!im.id) { im.ref = fb.doc(fb.collection(db, "listingImages")); im.newId = im.ref.id; } });
+    ed.images.forEach(im => { if (!im.id) im.newId = rest.newId(); });
     const imageIds = ed.images.map(im => im.id || im.newId);
     const data = {
       titleEn, titleEs,
@@ -348,20 +363,20 @@ $("ed-form").addEventListener("submit", async e => {
       status: $("ed-status").value,
       thumb: await makeThumb(ed.images[0].data),
       imageIds,
-      updatedAt: fb.serverTimestamp()
+      updatedAt: new Date()
     };
-    if (isNew) data.createdAt = fb.serverTimestamp();
+    if (isNew) data.createdAt = new Date();
 
     // 1) the listing itself (small, so it saves fast)
-    await withTimeout(fb.setDoc(ref, data, { merge: true }), 30000);
+    await rest.set(`listings/${ref.id}`, data, true, 30000);
     // 2) the pictures, all at the same time
-    await withTimeout(Promise.all(ed.images.map((im, i) => im.id
-      ? fb.updateDoc(fb.doc(db, "listingImages", im.id), { order: i })
-      : fb.setDoc(im.ref, { listingId: ref.id, data: im.data, order: i, createdAt: fb.serverTimestamp() }))), 90000);
+    await Promise.all(ed.images.map((im, i) => im.id
+      ? rest.set(`listingImages/${im.id}`, { order: i }, true, 30000)
+      : rest.set(`listingImages/${im.newId}`, { listingId: ref.id, data: im.data, order: i, createdAt: new Date() }, false, 90000)));
     // 3) pictures you removed
-    if (ed.removed.length) await withTimeout(Promise.all(ed.removed.map(id => fb.deleteDoc(fb.doc(db, "listingImages", id)))), 30000);
+    if (ed.removed.length) await Promise.all(ed.removed.map(id => rest.del(`listingImages/${id}`)));
 
-    ed.images.forEach(im => { if (!im.id) { im.id = im.newId; delete im.ref; } });
+    ed.images.forEach(im => { if (!im.id) im.id = im.newId; });
     ed.removed = [];
     invalidateListingsCache();
     const local = { ...data, id: ref.id, updatedAt: new Date() };
@@ -440,4 +455,3 @@ window.addEventListener("langchange", () => {
     renderEdImages(); renderEdSave();
   }
 });
-
