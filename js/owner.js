@@ -440,3 +440,4 @@ window.addEventListener("langchange", () => {
     renderEdImages(); renderEdSave();
   }
 });
+
